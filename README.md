@@ -1,8 +1,14 @@
-# About this repositories
-This repositories is place to find the software/hardware source for Dragino TrackerD product. 
+# About this repository
+This repository is the place to find the software/hardware resources for Dragino TrackerD product.
 
-TrackerD is a LoRaWAN Tracker, it supports below feature/sensors: GPS, WiFi, BLE, Temperature , Humidity , motion. 
-<img width="300" alt="java 8 and prio java 8  array review example" src="https://www.dragino.com/media/k2/galleries/165/LBT1_10.JPG">
+TrackerD is a LoRaWAN Tracker, it supports the following features / sensors:
+* GPS
+* WiFi
+* BLE (Bluetooth Low Energy)
+* Temperature
+* Humidity
+* Motion detection
+<img width="300" alt="TrackerD enclosure" src="https://www.dragino.com/media/k2/galleries/165/LBT1_10.JPG">
 
 # Hardware Info
 ## System Structure
