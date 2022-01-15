@@ -12,9 +12,9 @@ TrackerD is a LoRaWAN Tracker, it supports the following features / sensors:
 
 
 #  Software
-*Examples
- * LoRaWAN -- OTAA_FULL_FUNCTION : OTAA includes three axes, temperature and humidity, Bluetooth, WiFi, gps
- * None-LoRaWAN -- Point-to-Point : Point to Point Communication
+* Examples  
+  * LoRaWAN -- OTAA_FULL_FUNCTION : OTAA includes three axes, temperature and humidity, Bluetooth, WiFi, gps
+  * None-LoRaWAN -- Point-to-Point : Point to Point Communication
 
 # Hardware Info
 
