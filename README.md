@@ -11,10 +11,10 @@ TrackerD is a LoRaWAN Tracker, it supports the following features / sensors:
 <img width="300" alt="TrackerD enclosure" src="https://www.dragino.com/media/k2/galleries/165/LBT1_10.JPG">
 
 
-#  Software Example Info
-# TrackerD includes three axes, temperature and humidity, Bluetooth, WiFi, gps and LORA
-# Development Status
-  * Latest Development Release ：TrackerD V1.0
+#  Software
+|--Examples -- LoRaWAN -- OTAA_FULL_FUNCTION : OTAA includes three axes, temperature and humidity, Bluetooth, WiFi, gps
+          | -- None-LoRaWAN -- Point-to-Point : Point to Point Communication
+
 
 # Hardware Info
 
