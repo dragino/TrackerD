@@ -22,6 +22,11 @@
 #define LED_PIN_BLUE    2
 #define LED_PIN_GREEN   15
 
+#define LBT2_SCK  5
+#define LBT2_MISO 19
+#define LBT2_MOSI 27
+#define LBT2_SS   18
+
 class SYS
 {
   public:
