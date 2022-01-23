@@ -28,7 +28,9 @@ TrackerD is a LoRaWAN Tracker, it supports the following features / sensors:
   * ROM : 448 KB
   * SRAM: 520 KB
 * GPS : [Quectel L70](https://www.quectel.com/wp-content/uploads/pdfupload/Quectel_L70_GPS_Specification_V2.3.pdf) or [Quectel L76K](https://www.quectel.com/wp-content/uploads/2021/10/Quectel_L76K_Hardware_Design_V1.0.pdf)
-* LoRa Transceiver : HopeRF RFM92W/93W (Cf [Semtech SX1272/SX1273](https://semtech.com/products/wireless-rf/lora-core/sx1272#download-resources) as it seems Semtech docs are more up to date)
+* LoRa Transceiver - one of:
+  * HopeRF RFM92W/93W (Cf [Semtech SX1272/SX1273](https://semtech.com/products/wireless-rf/lora-core/sx1272#download-resources) as it seems Semtech docs are more up to date)
+  * [HopeRF RFM95W](https://www.hoperf.com/data/upload/portal/20190801/RFM95W-V2.0.pdf) (Cf [Semtech SX1276](https://semtech.com/products/wireless-rf/lora-core/sx1276#download-resources) as it seems Semtech docs are more up to date)
 * Accelerometer: [ST Microelectronics LIS3DH](https://www.st.com/resource/en/datasheet/lis3dh.pdf) (Also contains temperature sensor)
 * Humidity / temperature sensor : [GXCAS Technology GXHT3X](https://taoic.oss-cn-hangzhou.aliyuncs.com/8676/product/STD_1623205250000.pdf) (May be compatible with [Sensirion SHT30](https://www.sensirion.com/fileadmin/user_upload/customers/sensirion/Dokumente/2_Humidity_Sensors/Datasheets/Sensirion_Humidity_Sensors_SHT3x_Datasheet_digital.pdf) ?)
 * USB-TTL interface (depending on the HW):
