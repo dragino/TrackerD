@@ -1,6 +1,7 @@
 #include <lmic.h>
 #include <hal/hal.h>
 #include <SPI.h>
+#include <stdbool.h>
 #include "common.h"
 
 #define maxRxSize       128 
@@ -261,9 +262,11 @@ void setup() {
   do_send(&sendjob);
 }
 
+static uint8_t serial_index = 0;
 void loop() {
   // put your main code here, to run repeatedly:
-  if (Serial.available() > 0)//串口接收到数据
+  uint8_t available_bytes = Serial.available();
+  if (available_bytes > 0)//串口接收到数据
   {
     if(serial_flag == AT_OK)
     {
@@ -279,22 +282,52 @@ void loop() {
     {
       timerWrite(timer,0);
     }
-    
-    memset(rxData,0,maxRxSize);
-    Serial.readBytes(rxData,Serial.available());
-    ATEerror_t AT_State = ATInsPro(rxData);
-    if(AT_State == AT_OK)
-      Serial.println(ATError_description[AT_OK]);
-    else if(AT_State == AT_PARAM_ERROR)
-      Serial.println(ATError_description[AT_PARAM_ERROR]);
-    else if(AT_State == AT_BUSY_ERROR)
-      Serial.println(ATError_description[AT_BUSY_ERROR]);
-    else if(AT_State == AT_TEST_PARAM_OVERFLOW)
-      Serial.println(ATError_description[AT_TEST_PARAM_OVERFLOW]);
-    else if(AT_State == AT_RX_ERROR)
-      Serial.println(ATError_description[AT_RX_ERROR]);
-    else 
-      Serial.println(ATError_description[AT_ERROR]);
+
+    uint8_t end_of_string = false;
+
+    // We read (at most) available_bytes Bytes from Serial port,
+    // and store them in the buffer.
+    for (uint8_t i=0; i < available_bytes; i++) {
+      char result = (char)Serial.read();
+      rxData[serial_index++] = result;
+
+      // If the string is terminated, it's time to send it to the parser.
+      if (result == '\n') {
+        end_of_string = true;
+        serial_index = 0;
+        break;
+      }
+
+      // If we overflow the buffer, we stop and flush the input up to that point
+      if (serial_index >= maxRxSize) {
+        Serial.println(ATError_description[AT_TEST_PARAM_OVERFLOW]);
+        serial_index = 0;
+        memset(rxData,0,maxRxSize);
+      }
+    }
+
+    if (end_of_string == true) {
+      ATEerror_t AT_State = ATInsPro(rxData);
+      memset(rxData,0,maxRxSize);
+      if(AT_State == AT_OK) {
+        Serial.println(ATError_description[AT_OK]);
+      }
+      else if(AT_State == AT_PARAM_ERROR) {
+        Serial.println(ATError_description[AT_PARAM_ERROR]);
+      }
+      else if(AT_State == AT_BUSY_ERROR) {
+        Serial.println(ATError_description[AT_BUSY_ERROR]);
+      }
+      else if(AT_State == AT_TEST_PARAM_OVERFLOW) {
+        Serial.println(ATError_description[AT_TEST_PARAM_OVERFLOW]);
+      }
+      else if(AT_State == AT_RX_ERROR) {
+        Serial.println(ATError_description[AT_RX_ERROR]);
+      }
+      else {
+        Serial.println(ATError_description[AT_ERROR]);
+      }
+    }
   }
   os_runloop_once();
 
