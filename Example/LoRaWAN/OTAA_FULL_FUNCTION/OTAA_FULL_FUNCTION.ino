@@ -249,6 +249,11 @@ void setup() {
   sys.config_Get();
   print_wakeup_reason();
 
+  // This is necessary, early in the setup phase, because the ESP32-Arduino SPI
+  // library has default pin assignement - that are NOT those of our board.
+  // We override them here, and all subsequent uses of the SPI library will
+  // use these.
+  SPI.begin(LBT2_SCK, LBT2_MISO, LBT2_MOSI, LBT2_SS);
 // LMIC init
   os_init();
 // Reset the MAC state. Session and pending data transfers will be discarded.
