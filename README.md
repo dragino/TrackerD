@@ -96,3 +96,174 @@ TrackerD is a LoRaWAN Tracker, it supports the following features / sensors:
 | VDDA        | 46  | P    | Analog power supply       | -                | +3v3                                |
 | CAP2_NC     | 47  | -    | NC                        | -                | N/C                                 |
 | CAP1_NC     | 48  | -    | NC                        | -                | N/C                                 |
+
+# Development
+
+## Using PlatformIO (Command line)
+Install the following tools:
+* [PlatformIO Core](http://docs.platformio.org/page/core.html)
+
+Run these commands:
+```console
+# Change directory to project
+$ cd Example/LoRaWAN
+
+# Build project (need to do this after each update of the files)
+$ pio run
+Processing dragino_lbt2 (platform: https://github.com/platformio/platform-espressif32.git#feature/arduino-upstream; board: pico32; framework: arduino)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+* Adding toolchain toolchain-riscv32-esp with version 8.4.0+2021r1
+* Adding toolchain toolchain-xtensa-esp32 with version 8.4.0+2021r1
+* Adding toolchain toolchain-xtensa-esp32s2 with version 8.4.0+2021r1
+Verbose mode can be enabled via `-v, --verbose` option
+* Adding toolchain toolchain-riscv32-esp with version 8.4.0+2021r1
+* Adding toolchain toolchain-xtensa-esp32 with version 8.4.0+2021r1
+* Adding toolchain toolchain-xtensa-esp32s2 with version 8.4.0+2021r1
+CONFIGURATION: https://docs.platformio.org/page/boards/espressif32/pico32.html
+PLATFORM: Espressif 32 (3.3.1+sha.3784198) > ESP32 Pico Kit
+HARDWARE: ESP32 240MHz, 320KB RAM, 4MB Flash
+DEBUG: Current (esp-prog) External (esp-prog, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa)
+PACKAGES:
+ - framework-arduinoespressif32 0.0.0+sha.15bbd0a
+ - tool-esptoolpy 1.30100.210531 (3.1.0)
+ - toolchain-xtensa-esp32 8.4.0+2021r1
+Converting OTAA_FULL_FUNCTION.ino
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 33 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- <MCCI LoRaWAN LMIC library> 4.1.1
+|   |-- <SPI> 2.0.0
+|-- <TinyGPSPlus> 1.0.2
+|-- <SPI> 2.0.0
+|-- <EEPROM> 2.0.0
+|-- <WiFi> 2.0.0
+|-- <Wire> 2.0.0
+Building in release mode
+Compiling .pio/build/dragino_lbt2/src/GXHT30.cpp.o
+Compiling .pio/build/dragino_lbt2/src/OTAA_FULL_FUNCTION.ino.cpp.o
+Linking .pio/build/dragino_lbt2/firmware.elf
+Retrieving maximum program size .pio/build/dragino_lbt2/firmware.elf
+Checking size .pio/build/dragino_lbt2/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [=         ]  12.4% (used 40484 bytes from 327680 bytes)
+Flash: [=====     ]  54.4% (used 712397 bytes from 1310720 bytes)
+Building .pio/build/dragino_lbt2/firmware.bin
+esptool.py v3.1
+Merged 25 ELF sections
+========================================================================================================= [SUCCESS] Took 6.53 seconds =========================================================================================================
+
+
+# Upload firmware (easy way, full firmware bootloader + partitions + application)
+$ pio run --target upload --upload-port /dev/ttyUSB0
+Configuring upload protocol...
+AVAILABLE: esp-prog, espota, esptool, iot-bus-jtag, jlink, minimodule, olimex-arm-usb-ocd, olimex-arm-usb-ocd-h, olimex-arm-usb-tiny-h, olimex-jtag-tiny, tumpa
+CURRENT: upload_protocol = esptool
+Looking for upload port...
+Use manually specified: /dev/ttyUSB0
+Uploading .pio/build/dragino_lbt2/firmware.bin
+esptool.py v3.1
+Serial port /dev/ttyUSB0
+Connecting......
+Chip is ESP32-PICO-D4 (revision 1)
+Features: WiFi, BT, Dual Core, 240MHz, Embedded Flash, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+MAC: 30:83:98:da:6c:3c
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 921600
+Changed.
+Configuring flash size...
+Auto-detected Flash size: 4MB
+Flash will be erased from 0x00001000 to 0x00005fff...
+...
+
+...
+Writing at 0x000b7c39... (96 %)
+Writing at 0x000bd407... (100 %)
+Wrote 719168 bytes (464768 compressed) at 0x00010000 in 7.4 seconds (effective 777.4 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...
+========================================================================================================= [SUCCESS] Took 13.42 seconds =========================================================================================================
+
+# or
+
+# Upload firmware (fast way, only application is updated)
+$ esptool.py --chip esp32 --port "/dev/ttyUSB0" --baud 921600 --before no_reset --after no_reset write_flash --compress --flash_mode dio --flash_size detect 0x10000 .pio/build/dragino_lbt2/firmware.bin
+esptool.py v3.2
+Serial port /dev/ttyUSB0
+WARNING: Pre-connection option "no_reset" was selected. Connection may fail if the chip is not in bootloader or flasher stub mode.
+Connecting....
+Chip is ESP32-PICO-D4 (revision 1)
+Features: WiFi, BT, Dual Core, 240MHz, Embedded Flash, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+MAC: 30:83:98:da:6c:3c
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 921600
+Changed.
+Configuring flash size...
+Auto-detected Flash size: 4MB
+Flash will be erased from 0x00010000 to 0x000bffff...
+Compressed 719168 bytes to 464768...
+Wrote 719168 bytes (464768 compressed) at 0x00010000 in 7.4 seconds (effective 778.7 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Staying in bootloader.
+
+
+
+# Check device output
+$ pio device monitor
+--- Available filters and text transformations: colorize, debug, default, direct, esp32_exception_decoder, hexlify, log2file, nocontrol, printable, send_on_enter, time
+--- More details at https://bit.ly/pio-monitor-filters
+--- Miniterm on /dev/ttyUSB0  115200,8,N,1 ---
+--- Quit: Ctrl+C | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
+ets Jun  8 2016 00:22:57
+
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 188777542, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:1
+load:0x3fff0030,len:1284
+load:0x40078000,len:12836
+load:0x40080400,len:3032
+entry 0x400805e4
+Wakeup was not caused by deep sleep: 0
+RXMODE_RSSI
+Connecting to
+Minitor Dragino LoRa GPS Shield Status
+Time:155
+HUM:39.17
+TEM:25.96
+BAT:3.30 mV
+...
+
+...
+--- exit ---
+
+
+# Clean build files if needed
+$ pio run --target clean
+Processing dragino_lbt2 (platform: https://github.com/platformio/platform-espressif32.git#feature/arduino-upstream; board: pico32; framework: arduino)
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+* Adding toolchain toolchain-riscv32-esp with version 8.4.0+2021r1
+* Adding toolchain toolchain-xtensa-esp32 with version 8.4.0+2021r1
+* Adding toolchain toolchain-xtensa-esp32s2 with version 8.4.0+2021r1
+Removed .pio/build/dragino_lbt2/partitions.bin
+Removed .pio/build/dragino_lbt2/libFrameworkArduinoVariant.a
+Removed .pio/build/dragino_lbt2/libFrameworkArduino.a
+...
+
+...
+Removed .pio/build/dragino_lbt2/FrameworkArduino/libb64/cencode.c.d
+Removed .pio/build/dragino_lbt2/FrameworkArduino/libb64/cencode.c.o
+Done cleaning
+========================================================================================================= [SUCCESS] Took 0.31 seconds =========================================================================================================
+```
