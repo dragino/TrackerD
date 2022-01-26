@@ -271,11 +271,11 @@ static uint8_t serial_index = 0;
 void loop() {
   // put your main code here, to run repeatedly:
   uint8_t available_bytes = Serial.available();
-  if (available_bytes > 0)//串口接收到数据
+  if (available_bytes > 0)// Got data from UART.
   {
     if(serial_flag == AT_OK)
     {
-//定时器
+    //Configure Timer
       timerSemaphore = xSemaphoreCreateBinary();
       timer = timerBegin(0, 80, true);
       timerAttachInterrupt(timer, &onTimer, true);
@@ -342,7 +342,7 @@ void loop() {
     Serial.println("Enter sleep mode");
     SaveLMICToRTC(sys.tdc);
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_0,0); //1 = High, 0 = Low
-    esp_sleep_enable_timer_wakeup(sys.tdc*1000); //设置定时器唤醒
-    esp_deep_sleep_start(); //启动DeepSleep
+    esp_sleep_enable_timer_wakeup(sys.tdc*1000); // Set wake up timer 
+    esp_deep_sleep_start(); // Enter DeepSleep mode
   }
 }
