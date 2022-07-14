@@ -25,7 +25,7 @@ float GXHT3x_GetHum(void)
 {
     float hum = 0.0;
     hum = ((((gxht_data[3] * 256.0) + gxht_data[4]) * 100) / 65535.0);
-    Serial.printf("HUM:%.2f\r\n",hum);
+    Serial.printf("HUM:%.2f\n",hum);
     return hum;
 }
 
@@ -33,6 +33,6 @@ float GXHT3x_GetTem(void)
 {
     float tem = 0.0;
     tem = ((((gxht_data[0] * 256.0) + gxht_data[1]) * 175) / 65535.0) - 45;
-    Serial.printf("TEM:%.2f\r\n",tem);
+    Serial.printf("TEM:%.2f\n",tem);
     return tem;
 }

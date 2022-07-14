@@ -5,6 +5,7 @@
 
 #define AT            "AT"
 #define MODEL         "+MODEL"
+#define MOD           "+MOD"
 #define DEUI          "+DEUI"
 #define APPEUI        "+APPEUI"
 #define APPKEY        "+APPKEY"
@@ -12,13 +13,19 @@
 #define APPSKEY       "+APPSKEY"
 #define NWKSKEY       "+NWKSKEY"
 #define ADR           "+ADR"
+#define DR            "+DR"
+#define TXP           "+TXP"
 #define CFG           "+CFG"
 #define RESET         "Z"
 #define FDR           "+FDR"
-#define SCWIFI        "+SCWIFI"
 #define TDC           "+TDC"
-#define SYSMES        "+SYSMES"
-
+#define LON           "+LON"
+#define CHS           "+CHS"
+#define CHE           "+CHE"
+#define FTIME         "+FTIME"
+#define SMOD          "+SMOD"
+#define FRAME         "+FRAME"
+#define PDTA          "+PDTA"
 typedef enum
 {
   AT_OK = 0,
@@ -56,10 +63,13 @@ struct ATCommand_s
 ATEerror_t at_return_error(const char *param);
 ATEerror_t at_que(const char *param);
 ATEerror_t at_model_get(const char *param);
+ATEerror_t at_mod_set(const char *param);
+ATEerror_t at_mod_get(const char *param);
+ATEerror_t at_smod_set(const char *param);
+ATEerror_t at_smod_get(const char *param);
 ATEerror_t at_reset_run(const char *param);
 ATEerror_t at_fdr_run(const char *param);
 ATEerror_t at_cfg_run(const char *param);
-ATEerror_t at_scwifi_run(const char *param);
 ATEerror_t at_tdc_get(const char *param);
 ATEerror_t at_tdc_set(const char *param);
 ATEerror_t at_sysmes_run(const char *param);
@@ -77,6 +87,19 @@ ATEerror_t at_appskey_get(const char *param);
 ATEerror_t at_appskey_set(const char *param);
 ATEerror_t at_adr_get(const char *param);
 ATEerror_t at_adr_set(const char *param);
+ATEerror_t at_dr_get(const char *param);
+ATEerror_t at_dr_set(const char *param);
+ATEerror_t at_txp_get(const char *param);
+ATEerror_t at_txp_set(const char *param);
+ATEerror_t at_ftime_get(const char *param);
+ATEerror_t at_ftime_set(const char *param);
+ATEerror_t at_lon_get(const char *param);
+ATEerror_t at_lon_set(const char *param);
+ATEerror_t at_CHE_get(const char *param);
+ATEerror_t at_CHE_set(const char *param);
+ATEerror_t at_frame_get(const char *param);
+ATEerror_t at_frame_set(const char *param);
+ATEerror_t at_PDTA_set(const char *param);
 
 static const struct ATCommand_s ATCommand[] =
 {
@@ -91,6 +114,28 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_return_error,
     .run = at_return_error,
   },
+/**************** AT+MOD ****************/  
+  {
+    .string = AT MOD,
+    .size_string = sizeof(MOD) - 1,
+#ifndef NO_HELP
+    .help_string = AT MOD "   : Get or set work mode",
+#endif
+    .get = at_mod_get,
+    .set = at_mod_set,
+    .run = at_return_error,
+  },
+/**************** AT+SMOD ****************/  
+  {
+    .string = AT SMOD,
+    .size_string = sizeof(SMOD) - 1,
+#ifndef NO_HELP
+    .help_string = AT SMOD "   : Get or set work mode",
+#endif
+    .get = at_smod_get,
+    .set = at_smod_set,
+    .run = at_return_error,
+  },  
 /**************** ATZ ****************/  
   {
     .string = AT RESET,
@@ -190,6 +235,28 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_adr_set,
     .run = at_return_error,
   },
+/**************** AT+DR ****************/  
+  {
+    .string = AT DR,
+    .size_string = sizeof(DR) - 1,
+#ifndef NO_HELP
+    .help_string = "AT" DR "      : Get or Set the Data Rate setting.",
+#endif
+    .get = at_dr_get,
+    .set = at_dr_set,
+    .run = at_return_error,
+  },
+/**************** AT+TXP ****************/  
+  {
+    .string = AT TXP,
+    .size_string = sizeof(TXP) - 1,
+#ifndef NO_HELP
+    .help_string = "AT" TXP "     : Get or Set the Transmit Power (MAX:0, MIN:5).",
+#endif
+    .get = at_txp_get,
+    .set = at_txp_set,
+    .run = at_return_error,
+  },
 /**************** AT+CFG ****************/  
   {
     .string = AT CFG,
@@ -200,17 +267,6 @@ static const struct ATCommand_s ATCommand[] =
     .get = at_return_error,
     .set = at_return_error,
     .run = at_cfg_run,
-  },
-/**************** AT+SCWIFI ****************/  
-  {
-    .string = AT SCWIFI,
-    .size_string = sizeof(SCWIFI) - 1,
-#ifndef NO_HELP
-    .help_string = AT SCWIFI "  : Scan WIFI signal ",
-#endif
-    .get = at_return_error,
-    .set = at_return_error,
-    .run = at_scwifi_run,
   },
 /**************** AT+TDC ****************/  
   {
@@ -223,17 +279,50 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_tdc_set,
     .run = at_return_error,
   },
-/**************** AT+SYSMES ****************/  
+/**************** AT+FTIME ****************/  
   {
-    .string = AT SYSMES,
-    .size_string = sizeof(SYSMES) - 1,
+    .string = AT FTIME,
+    .size_string = sizeof(FTIME) - 1,
 #ifndef NO_HELP
-    .help_string = AT SYSMES "  : Get system information",
+    .help_string = AT FTIME "     : Get or set the application data transmission interval in ms",
 #endif
-    .get = at_return_error,
-    .set = at_return_error,
-    .run = at_sysmes_run,
+    .get = at_ftime_get,
+    .set = at_ftime_set,
+    .run = at_return_error,
+  },  
+/**************** AT+LON ****************/  
+  {
+    .string = AT LON,
+    .size_string = sizeof(LON) - 1,
+#ifndef NO_HELP
+    .help_string = AT LON "     : Enable/Disable LED activity for uplink",
+#endif
+    .get = at_lon_get,
+    .set = at_lon_set,
+    .run = at_return_error,
   },
+/**************** AT+CHE ****************/  
+  {
+    .string = AT CHE,
+    .size_string = sizeof(CHE) - 1,
+#ifndef NO_HELP
+    .help_string = AT CHE "     : Enable/Disable LED activity for uplink",
+#endif
+    .get = at_CHE_get,
+    .set = at_CHE_set,
+    .run = at_return_error,
+  },
+/**************** AT+FRAME ****************/  
+  {
+    .string = AT FRAME,
+    .size_string = sizeof(FRAME) - 1,
+#ifndef NO_HELP
+    .help_string = AT FRAME "     : Enable/Disable LED activity for uplink",
+#endif
+    .get = at_frame_get,
+    .set = at_frame_set,
+    .run = at_return_error,
+  },  
 };
 
 ATEerror_t ATInsPro(char* atdata);

@@ -10,7 +10,7 @@
 void GXHT3x_Sent(uint8_t* buff,uint8_t buff_len);
 void GXHT3x_Reset(void);
 void GXHT3x_LowPower(void);
-void GXHT3x_GetData(void); 
+void GXHT3x_GetData(void);
 float GXHT3x_GetHum(void);
 float GXHT3x_GetTem(void);
 
