@@ -244,7 +244,7 @@ Minitor Dragino LoRa GPS Shield Status
 Time:155
 HUM:39.17
 TEM:25.96
-BAT:3.30 mV
+BAT:4.20 V
 ...
 
 ...
