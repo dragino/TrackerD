@@ -14,6 +14,7 @@ TrackerD is a LoRaWAN Tracker, it supports the following features / sensors:
 #  Software
 * Examples  
   * LoRaWAN -- OTAA_FULL_FUNCTION : OTAA includes three axes, temperature and humidity, Bluetooth, WiFi, gps
+  * LoRaWAN -- TrackerD : OTAA includes three axes, temperature and humidity, Bluetooth, gps
   * None-LoRaWAN -- Point-to-Point : Point to Point Communication
 
 # Hardware Info
@@ -36,7 +37,7 @@ TrackerD is a LoRaWAN Tracker, it supports the following features / sensors:
 * USB-TTL interface (depending on the HW):
   * [CH340N](http://wch-ic.com/downloads/CH340DS1_PDF.html)
   * [CH9102F](http://wch-ic.com/downloads/CH9102DS1_PDF.html)
-* Battery charger: [Consonnance CN3052A](http://www.consonance-elec.com/pdf/datasheet/DSE-CN3052A.pdf)
+* Battery charger: [Consonnance LP4054H](http://ai.lowpowersemi.com:811/ESAPP1_34.1/201907/L_rc20190718032798_L20190718000001_LP4054H-00.pdf)
 
 ### Other datasheeets
 * [Espressif ESP32 Technical reference manual](https://www.espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf)
