@@ -1,5 +1,5 @@
 #include "GPS.h"
-#include "TinyGPS++.h"
+#include <TinyGPS++.h>
 
 HardwareSerial SerialGPS(1);
 TinyGPSPlus gps;
@@ -104,12 +104,12 @@ bool GPS_DATA(void)
             sys.gps_data_buff[i++] = (sensor.day_gps)       & 0xFF;
             sys.gps_data_buff[i++] = (sensor.hour_gps)      & 0xFF;
             sys.gps_data_buff[i++] = (sensor.minute_gps)    & 0xFF;
-            sys.gps_data_buff[i++] = (sensor.second_gps)    & 0xFF;  
-  
-  //          sys.gps_data_Weite();
-  //          Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);    
-  //          sys.read_gps_data_on_flash();
-  //          Serial.printf("addr_gps_read:%d\r\n",sys.addr_gps_read);       
+            sys.gps_data_buff[i++] = (sensor.second_gps)    & 0xFF; 
+             
+//            sys.gps_data_Weite();
+//            Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);    
+//            sys.read_gps_data_on_flash();
+//            Serial.printf("addr_gps_read:%d\r\n",sys.addr_gps_read);       
             if(sys.lon == 1)
             {
               digitalWrite(LED_PIN_BLUE, HIGH);

@@ -32,9 +32,18 @@ SYS::~SYS(void)
 int BatGet(void)
 {
   int   bat_i=0;
-  float bat_f = 3.46/4095*analogRead(BAT_PIN_READ);
-  bat_f = bat_f*570/470;
-  Serial.printf("BAT:%.2f V\r\n",bat_f);
+  float bat_f  =0.0;
+  float batv_f = 3.30/4095*analogRead(BAT_PIN_READ);
+  if(batv_f == 3.3)
+  {
+    bat_f = 3.46/4095*analogRead(BAT_PIN_READ);
+    bat_f = bat_f*570/470;
+  }
+  else
+  {
+    bat_f = batv_f*570/470;
+  }
+    Serial.printf("BAT:%.2f V\r\n",bat_f);  
   bat_i = (int)(bat_f*1000);
   return bat_i;
 }
@@ -77,25 +86,21 @@ void Device_status()
   uint16_t version;
   
   devicet.battrey = BatGet();
-  if(sys.sensor_mode==1)
-  { 
-    devicet.sensor_type = 0x0A;
-  }
-  else if(sys.sensor_mode==2)
-  {
-    devicet.sensor_type = 0x0E;
-  }
+  
+  devicet.sensor_type = 0x13;   
+  
   sys.fire_version = string_touint();
+//  Serial.printf("sys.fire_version:%d\r\n",sys.fire_version);
   if(sys.fire_version>100)
   {
-    version=(sys.fire_version/100)<<8|(sys.fire_version/10)<<4|(sys.fire_version%10);
+    version=(sys.fire_version/100)<<8|(sys.fire_version/10%10)<<4|(sys.fire_version%10);
   }
   else
   {
     version=(sys.fire_version/10)<<8|(sys.fire_version%10)<<4;    
   }
   devicet.firm_ver = version;
-
+//  Serial.printf("devicet.firm_ver:%d\r\n",devicet.firm_ver);
   #if defined(CFG_eu868)
     freq_band=0x01;
   #elif defined( CFG_us915)
@@ -135,6 +140,56 @@ void Device_status()
   devicet.sub_band = sys.channel_single;
   #else
   devicet.sub_band = 0xff;
+  #endif
+
+  devicet.SMODE = ((sys.sensor_mode <<6)|(sys.mod<<4 )|sys.ble_mod) & 0xFF;
+//  Serial.printf("SMODE = %0X\n\r",devicet.SMODE);
+//  Serial.printf("sensor_mod = %d\n\r",(devicet.SMODE>>6)& 0x3f);
+//  Serial.printf("mod = %d\n\r",(devicet.SMODE>>4)& 0x03);
+//  Serial.printf("ble_mod = %d\n\r",(devicet.SMODE)& 0x0f);
+
+  devicet.FLAG = ((sys.PNACKmd<<2)|(sys.lon<<1)|sys.Intwk)&0xFF;
+//  Serial.printf("FLAG= %0X\n\r",devicet.FLAG );
+//  Serial.printf("PNACKmd = %d\n\r",(devicet.FLAG)& 0x04);
+//  Serial.printf("lon = %d\n\r",(devicet.FLAG>>1)& 0x01);
+//  Serial.printf("Intwk = %d\n\r",(devicet.FLAG)& 0x01);  
+  
+}
+
+void SYS::Band_information(void)
+{
+  #if defined(CFG_eu868)
+    Serial.println("EU868");
+  #elif defined( CFG_us915)
+    Serial.println("US915");
+  #elif defined( CFG_in866 )
+    Serial.println("IN865");
+  #elif defined( CFG_au915 )
+    Serial.println("AU915");
+  #elif defined( CFG_KZ865 )
+    Serial.println("KZ865");
+  #elif defined( CFG_RU864 )
+    Serial.println("RU864");
+  #elif defined( CFG_as923 )
+    #if defined AS923_1
+    Serial.println("AS923_1");
+    #elif defined AS923_2
+    Serial.println("AS923_2");
+    #elif defined AS923_3
+    Serial.println("AS923_3");
+    #else
+    Serial.println("AS923");
+    #endif
+  #elif defined( REGION_CN470 )
+    Serial.println("CN470");
+  #elif defined( REGION_EU433 )
+    Serial.println("EU433");
+  #elif defined( CFG_kr920 ) 
+    Serial.println("KR920");
+  #elif defined( REGION_MA869 ) 
+    Serial.println("MA869");
+  #else
+   Serial.println("********");
   #endif
 }
 
@@ -368,7 +423,27 @@ void SYS::config_Write(void)
 
   DATA.writeUInt(addr1, sys_time);               
   addr1 += sizeof(unsigned int);  
-  
+
+  DATA.writeUInt(addr1, gps_write);               
+  addr1 += sizeof(unsigned int);    
+
+  data_8 = exit_off;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char); 
+
+//ble_mod
+  data_8 = ble_mod;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);  
+//mod
+  data_8 = save_ble_mode;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);  
+
+  data_8 =  PNACKmd;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);
+    
   for(uint8_t i=0;i<strlen(sys.blemask_data);i++)
   {
     DATA.writeUChar(addr1, blemask_data[i]);               
@@ -531,6 +606,21 @@ void SYS::config_Read(void)
   if(sys_time == 0)
     sys_time = 1200000;  
 
+  gps_write = DATA.readUInt(addr1);
+  addr1 += sizeof(unsigned int);
+
+  exit_off = DATA.readUChar(addr1);
+  addr1 += sizeof(unsigned char);  
+
+  ble_mod = DATA.readUChar(addr1);
+  addr1 += sizeof(unsigned char);    
+
+  save_ble_mode = DATA.readUChar(addr1);
+  addr1 += sizeof(unsigned char);
+
+  PNACKmd = DATA.readUChar(addr1);
+  addr1 += sizeof(unsigned char);       
+
   for(uint8_t i=0;i<6;i++)
   {
     sys.blemask_data[i] = DATA.readUChar(addr1);
@@ -539,12 +629,13 @@ void SYS::config_Read(void)
 }
 
 void SYS::gps_data_Weite(void)
-{
-//  if(addr_gps_write == 3765)
-//  {
-//   addr_gps_write = 0; 
-//  }
-   if(addr_gps_write <= 3765)
+{  
+  if(addr_gps_write == 4095)
+  {
+   gps_write = addr_gps_write;
+   addr_gps_write = 0; 
+  }
+   if(addr_gps_write <= 4095)
    {
       for(uint8_t i=0;i<15;i++)
       {

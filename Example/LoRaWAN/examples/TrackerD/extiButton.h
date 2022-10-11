@@ -24,4 +24,6 @@ void button_event_init();
 
 void button_attach_loop();
 
+void alarm();
+
 #endif

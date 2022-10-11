@@ -9,7 +9,7 @@
 
 
 #define Pro_model           "TrackerD "
-#define Pro_version         "v1.0.0 "
+#define Pro_version         "v1.4.0 "
 #define EEPROM_DATA_SIZE    256
 #define EEPROM_KEY_SIZE     68
 #define EEPROM_GPSDATA_SIZE 4096
@@ -40,6 +40,7 @@ class SYS:public LORA
     void read_gps_data_on_flash();
     void GPSDATA_CLEAR(void);
     void customize_freq_set(void);
+    void Band_information(void);
     uint8_t     gps_data_buff[15];
     char        blemask_data[12]={'0','0','0','0','0','0'};
     char        buff1[100];
@@ -63,15 +64,20 @@ class SYS:public LORA
     uint8_t     gps_alarm = 0;
     uint8_t     alarm_count = 0;
     uint8_t     buzzer_flag = 0;
+    uint8_t     alarm_no = 0;
     uint8_t     exti_flag = 1;
+    uint8_t     exit_off = 1;
     uint8_t     sleep_flag = 0;
     uint8_t     port = 2;
     uint8_t     sensor_mode = 1;
     uint8_t     save_sensor_mode = 1;
-    uint8_t     save_mode = 1;
+    uint8_t     save_mode = 0;
+    uint8_t     ble_mod = 0;
+    uint8_t     save_ble_mode = 0;
     uint16_t    fire_version=0;
     uint8_t     channel_single = 1;
     uint32_t    addr_gps_write=0;
+    uint32_t    gps_write=0;
     uint32_t    addr_gps_read=0;
     uint32_t    fre=0;
     uint8_t     frame_ACK =0;
@@ -82,7 +88,9 @@ class SYS:public LORA
     uint8_t     ic_versino = 2;
     uint8_t     Dwelltime = 1;
     uint8_t     Intwk = 0;
+    uint8_t     PNACKmd = 0;
     uint8_t     keep_flag = 0;
+    uint8_t     device_flag = 0;
     float       pdop_value = 2.0;
     int         data_read = 0;
     bool        gps_work_flag = true;
@@ -100,8 +108,12 @@ class Devicet
     uint8_t freq_band;
     
     uint8_t sub_band;
+
+    uint8_t FLAG = 0;
     
     uint16_t battrey;  
+
+    uint32_t SMODE;
 };
 
 #include "at.h"

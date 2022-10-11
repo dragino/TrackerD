@@ -34,7 +34,7 @@ ATEerror_t at_fdr_run(const char *param)
 {
   
   sys.DATA_CLEAR(); 
-  sys.GPSDATA_CLEAR();
+//  sys.GPSDATA_CLEAR();
 //  EEPROM.commit(); 
   ESP.restart();
   return AT_OK;
@@ -43,7 +43,8 @@ ATEerror_t at_fdr_run(const char *param)
 /**************       AT+SLEEP       **************/
 ATEerror_t at_sleep_run(const char *param)
 {
-  
+//  if(keep)
+  Serial.println("sleep");  
   hal_sleep();    
   sys.LORA_EnterSleepMode();
   esp_deep_sleep_start(); //DeepSleep  
@@ -296,23 +297,6 @@ ATEerror_t at_model_get(const char *param)
   return AT_OK;
 }
 
-/**************       AT_MOD       **************/
-ATEerror_t at_mod_get(const char *param)
-{
-  if(keep)
-    Serial.print(AT MOD"=");
-  Serial.printf("%d\r\n",sys.mod);
-  return AT_OK;
-}
-
-ATEerror_t at_mod_set(const char *param)
-{
-  sys.mod = atoi(param);
-  if(strlen(param)!=1)
-    return AT_PARAM_ERROR;  
-  return AT_OK;
-}
-
 /**************       AT_SMOD       **************/
 ATEerror_t at_smod_get(const char *param)
 {
@@ -320,19 +304,23 @@ ATEerror_t at_smod_get(const char *param)
     Serial.print(AT SMOD"=");
   Serial.printf("%d",sys.sensor_mode);
   Serial.printf(",");
-  Serial.printf("%d\r\n",sys.mod);
+  Serial.printf("%d",sys.mod);
+  Serial.printf(",");
+  Serial.printf("%d\r\n",sys.ble_mod);  
   return AT_OK;
 }
 
 ATEerror_t at_smod_set(const char *param)
 {
-  char mod[3]={0};
-  memcpy(mod,param,3);
+  char mod[5]={0};
+  memcpy(mod,param,5);
   sys.sensor_mode = (int)mod[0]-48;
   sys.save_sensor_mode = (int)mod[0]-48;
   sys.mod = (int)mod[2]-48;
   sys.save_mode = (int)mod[2]-48;
-  if(strlen(param)!=3)
+  sys.ble_mod = (int)mod[4]-48;
+  sys.save_ble_mode = (int)mod[4]-48;    
+  if(strlen(param)!=5)
     return AT_PARAM_ERROR;  
   return AT_OK;
 }
@@ -494,6 +482,25 @@ ATEerror_t at_cfm_set(const char *param)
     return AT_PARAM_ERROR;
   }
   sys.frame_flag = frame_flag;
+  return AT_OK;
+}
+
+/**************       AT_PNACKMD       **************/
+ATEerror_t at_pnackmd_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT PNACKMD  "=");
+  Serial.println(sys.PNACKmd);
+  return AT_OK;
+}
+ATEerror_t at_pnackmd_set(const char *param)
+{
+ uint8_t pnackmd = atoi(param);
+  if(pnackmd > 2)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.PNACKmd = pnackmd;
   return AT_OK;
 }
 

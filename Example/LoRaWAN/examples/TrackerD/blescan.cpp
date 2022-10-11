@@ -162,9 +162,9 @@ void ble_data(void)
     int len = strlen(sys.BLEDATA)/45;
     if(strlen(sys.BLEDATA) < 135)
     {
-      sys.mod = 3;
+      sys.ble_mod = 1;
     }
-    if(sys.mod == 2) //Find the three optimal beacons
+    if(sys.ble_mod == 0) //Find the three optimal beacons
     {
         int num2 = 0,num3 = 0;
         for(int a = 0;a<3;a++)     
@@ -217,7 +217,7 @@ void ble_data(void)
         Serial.printf("DATA2:%s\r\n", sys.BLEDATA2);
         Serial.printf("DATA3:%s\r\n", sys.BLEDATA3);          
     }
-    else if(sys.mod == 3) //Find the optimal beacon
+    else if(sys.ble_mod == 1) //Find the optimal beacon
     {
       strncpy(bmin,&sys.BLEDATA[42],3);
       num = 0;   

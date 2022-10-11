@@ -5,7 +5,6 @@
 
 #define AT            "AT"
 #define MODEL         "+MODEL"
-#define MOD           "+MOD"
 #define DEUI          "+DEUI"
 #define APPEUI        "+APPEUI"
 #define APPKEY        "+APPKEY"
@@ -35,6 +34,7 @@
 #define DWELLT        "+DWELLT"
 #define BLEMASK       "+BLEMASK"
 #define INTWK         "+INTWK"
+#define PNACKMD       "+PNACKMD"
 
 typedef enum
 {
@@ -74,8 +74,6 @@ uint8_t StrToHex(uint8_t *pbDest, char *pbSrc, uint8_t nLen);
 ATEerror_t at_return_error(const char *param);
 ATEerror_t at_que(const char *param);
 ATEerror_t at_model_get(const char *param);
-ATEerror_t at_mod_set(const char *param);
-ATEerror_t at_mod_get(const char *param);
 ATEerror_t at_smod_set(const char *param);
 ATEerror_t at_smod_get(const char *param);
 ATEerror_t at_reset_run(const char *param);
@@ -128,6 +126,8 @@ ATEerror_t at_dwelltime_get(const char *param);
 ATEerror_t at_dwelltime_set(const char *param);
 ATEerror_t at_blemask_get(const char *param);
 ATEerror_t at_blemask_set(const char *param);
+ATEerror_t at_pnackmd_get(const char *param);
+ATEerror_t at_pnackmd_set(const char *param);
 
 static const struct ATCommand_s ATCommand[] =
 {
@@ -274,17 +274,6 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_txp_set,
     .run = at_return_error,
   },
-/**************** AT+MOD ****************/  
-  {
-    .string = AT MOD,
-    .size_string = sizeof(MOD) - 1,
-#ifndef NO_HELP
-    .help_string = AT MOD "   : Get or set work mode",
-#endif
-    .get = at_mod_get,
-    .set = at_mod_set,
-    .run = at_return_error,
-  },
 /**************** AT+SMOD ****************/  
   {
     .string = AT SMOD,
@@ -412,10 +401,21 @@ static const struct ATCommand_s ATCommand[] =
     .string = AT CFM,
     .size_string = sizeof(CFM) - 1,
 #ifndef NO_HELP
-    .help_string = AT CFM "     : Enable/Disable LED activity for uplink",
+    .help_string = AT CFM "     : Get or Set the confirmation mode (0-1)",
 #endif
     .get = at_cfm_get,
     .set = at_cfm_set,
+    .run = at_return_error,
+  },  
+/**************** AT+PNACKMD ****************/  
+  {
+    .string = AT PNACKMD,
+    .size_string = sizeof(PNACKMD) - 1,
+#ifndef NO_HELP
+    .help_string = AT PNACKMD "     : Enable/Disable Auto Send None-ACK messages",
+#endif
+    .get = at_pnackmd_get,
+    .set = at_pnackmd_set,
     .run = at_return_error,
   },  
 /**************** AT+PDOP ****************/  

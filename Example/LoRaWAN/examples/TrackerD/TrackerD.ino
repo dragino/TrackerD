@@ -42,6 +42,7 @@ void os_getDevKey (u1_t* buf) { sys.LORA_GetAKEY(buf);}
 static void LORA_RxData( uint8_t *AppData,uint8_t AppData_Len);
 void gps_send(void);
 void device_start(void);
+void Alarm_start(void);
 void sys_sleep(void);
 void alarm_state(void);
 int hexToint(char *str);
@@ -63,7 +64,7 @@ void ARDUINO_ISR_ATTR onTimer()
   // Give a semaphore that we can check in the loop
   //xSemaphoreGiveFromISR(timerSemaphore, NULL);
   sys.gps_work_flag = false;
-  
+
 }
 
 void ARDUINO_ISR_ATTR keepTimer()
@@ -142,8 +143,7 @@ void LoraWANPrintLMICOpmode(void)
     if (LMIC.opmode & OP_UNJOIN)
     {
         Serial.print(F("OP_UNJOIN "));
-    }
-  
+    } 
 }
 
 void onEvent (ev_t ev) 
@@ -164,17 +164,19 @@ void onEvent (ev_t ev)
           Serial.println(F("EV_BEACON_TRACKED"));
           break;
       case EV_JOINING:
+          if(sys.lon == 1)
+          {
+            digitalWrite(LED_PIN_BLUE, HIGH);
+            delay(200);
+            digitalWrite(LED_PIN_BLUE, LOW);  
+          }       
           Serial.println(F("EV_JOINING"));
           break;
       case EV_JOINED:
           Serial.println(F("EV_JOINED"));
           os_JOINED_flag = 1;
           fcnt_flag = 1;
-          if(sys.lon == 1)
-          {
-            digitalWrite(LED_PIN_GREEN, HIGH);
-            delay(1000);
-          }                            
+          digitalWrite(LED_PIN_GREEN, HIGH);                   
           LMIC_getSessionKeys(&sys.netid, &sys.devaddr, sys.nwkSKey, sys.appSKey);
           // Disable link check validation (automatically enabled
           // during join, but because slow data rates change max TX
@@ -188,7 +190,8 @@ void onEvent (ev_t ev)
           else
           {
             sys.LORA_SetDR(LMIC.datarate);
-          }            
+          } 
+          delay(5000);             
           break;
       /*
       || This event is defined but not used in the code. No
@@ -206,19 +209,40 @@ void onEvent (ev_t ev)
           break;
       case EV_TXCOMPLETE: 
           Serial.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
+          if (LMIC.dataLen)
+          {
+            Serial.print(F("Received:"));
+            for(uint8_t i=0;i<LMIC.dataLen;i++)
+              Serial.printf("%.2X ",LMIC.frame[i+LMIC.dataBeg]);
+            Serial.println();
+            LORA_RxData(&LMIC.frame[LMIC.dataBeg],LMIC.dataLen);            
+          }          
           if (LMIC.txrxFlags & TXRX_ACK)
           {
-            sys.frame_ACK = 0;
-            if(sys.addr_gps_write == sys.addr_gps_read)
+            if(sys.PNACKmd == 1)
             {
-              sys.GPSDATA_CLEAR();
-              sys.addr_gps_read = 0;
-              sys.addr_gps_write = 0;
-              sys.loggpsdata_send = 0;
-            }
-            if(sys.addr_gps_write >=14)
-            {
-              sys.loggpsdata_send = 1;
+              sys.frame_ACK = 0;
+              if(sys.gps_write == 4095)
+              {
+                if(sys.gps_write == sys.addr_gps_read)
+                {
+                  sys.GPSDATA_CLEAR();
+                  sys.addr_gps_read = 0;
+                  sys.addr_gps_write = 0;
+                  sys.loggpsdata_send = 0;
+                }
+              }
+              else if(sys.addr_gps_write == sys.addr_gps_read)
+              {
+                sys.GPSDATA_CLEAR();
+                sys.addr_gps_read = 0;
+                sys.addr_gps_write = 0;
+                sys.loggpsdata_send = 0;
+              }
+              if(sys.addr_gps_write >=14)
+              {
+                sys.loggpsdata_send = 1;
+              }
             }
             if((LMIC.opmode & OP_NEXTCHNL)||(LMIC.opmode & OP_RNDTX))
             {
@@ -233,6 +257,8 @@ void onEvent (ev_t ev)
           }            
           else if (LMIC.txrxFlags & TXRX_NACK)
           {
+            if(sys.PNACKmd == 1)
+            {
              if(sys.sensor_mode == 1 && sys.frame_flag == 1)
              {
               sys.config_Read();
@@ -241,14 +267,14 @@ void onEvent (ev_t ev)
                 sys.GPSDATA_CLEAR();
                 sys.addr_gps_write =0 ;
               }
-              sys.gps_data_Weite();
-              sys.loggpsdata_send = 0;  
+             if(sensor.latitude !=0 && sensor.longitude !=0)
+              {
+                sys.gps_data_Weite();
+                sys.loggpsdata_send = 0;  
+              }              
               Serial.println(F("Received nack"));   
-             }      
-          }
-          if( sys.frame_ACK == 1)
-          {
-           ;
+             } 
+            }     
           }
           if((LMIC.opmode & OP_NEXTCHNL)||(LMIC.opmode & OP_RNDTX))
           {
@@ -258,19 +284,11 @@ void onEvent (ev_t ev)
 //            sys_sleep();            
 //              #endif     
           }           
-          if (LMIC.dataLen)
-          {
-            Serial.print(F("Received:"));
-            for(uint8_t i=0;i<LMIC.dataLen;i++)
-              Serial.printf("%.2X ",LMIC.frame[i+LMIC.dataBeg]);
-            Serial.println();
-            LORA_RxData(&LMIC.frame[LMIC.dataBeg],LMIC.dataLen);            
-          }
           if(sys.addr_gps_read <= 0)
           {
            sys.addr_gps_read = 0;
           }
-          send_complete = true;          
+           send_complete = true;          
           break;
       case EV_LOST_TSYNC:
           Serial.println(F("EV_LOST_TSYNC"));
@@ -300,7 +318,7 @@ void onEvent (ev_t ev)
           if(sys.lon == 1)
           {
             digitalWrite(LED_PIN_GREEN, HIGH);
-            delay(100);
+            delay(200);
           }
           if(os_JOINED_flag == 0 || fcnt_flag == 1)
           { 
@@ -315,8 +333,11 @@ void onEvent (ev_t ev)
           }       
           if( (LMIC.txrxFlags & TXRX_DNW1) == 0 || (LMIC.txrxFlags & TXRX_NACK) !=0 || LMIC.dataLen == 0 )          
           {
-            sys.frame_ACK = 1;
+            if(sys.PNACKmd == 1)
+            {
+             sys.frame_ACK = 1;
              LMIC.txCnt = 8; 
+            }
           }               
           Serial.println(F("EV_TXSTART"));       
           break;
@@ -381,9 +402,18 @@ void do_send(osjob_t* j)
         mydata[i++] = sys.gps_data_buff[14] & 0xFF;              
       }
       else
-      {       
-        if(sys.sensor_mode == 1)
+      { 
+        if(sensor.latitude == 0 && sensor.longitude == 0)
         {
+          if(sys.lon == 1)
+          {
+            digitalWrite(LED_PIN_RED, HIGH);
+            delay(200); 
+            digitalWrite(LED_PIN_RED, LOW);
+          }      
+        }
+        if(sys.sensor_mode == 1 )
+        { 
           mydata[i++] = (sensor.latitude>>24)  & 0xFF;
           mydata[i++] = (sensor.latitude>>16)  & 0xFF;
           mydata[i++] = (sensor.latitude>>8)   & 0xFF;
@@ -397,7 +427,7 @@ void do_send(osjob_t* j)
             sys.port = 2;
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5) | sys.frame) & 0xFF;   
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)) & 0xFF;   
             GXHT3x_GetData();
             sensor.hum = (int)(GXHT3x_GetHum()*10);
             sensor.tem = (int)(GXHT3x_GetTem()*10); 
@@ -411,27 +441,16 @@ void do_send(osjob_t* j)
             sys.port = 3;
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5) | sys.frame) & 0xFF;           
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)) & 0xFF;           
           }               
         }
         if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
         {
-          if(sys.mod == 2)
-          {
-            sys.port = 4;
-            mydata[i++] = (sensor.latitude>>24)  & 0xFF;
-            mydata[i++] = (sensor.latitude>>16)  & 0xFF;
-            mydata[i++] = (sensor.latitude>>8)   & 0xFF;
-            mydata[i++] = (sensor.latitude)      & 0xFF;
-            mydata[i++] = (sensor.longitude>>24) & 0xFF;
-            mydata[i++] = (sensor.longitude>>16) & 0xFF;
-            mydata[i++] = (sensor.longitude>>8)  & 0xFF;
-            mydata[i++] = (sensor.longitude)     & 0xFF;             
-            mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
-            mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5) | sys.frame) & 0xFF;                
+          if(sys.ble_mod  == 1)
+          {      
+            ;                  
           }
-          else if(sys.mod == 3)
+          else if(sys.ble_mod  == 0)
           {
             sys.port = 6;
             char bleuuidmajorminjor[100]={0};
@@ -457,40 +476,10 @@ void do_send(osjob_t* j)
             mydata[i++] = num;     
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5) | sys.frame) & 0xFF;                   
-          }      
-          else if(sys.mod == 3)
-          {
-            sys.port = 7;
-            mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
-            mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5) | sys.frame) & 0xFF;                   
-          }              
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5) ) & 0xFF;                   
+          }                    
         }
       }        
-//      if(sys.mod!=DEFAULT_MODE && sys.mod<GXHT3x_MODE)
-//      {
-//        uint8_t readData = 0;
-//        if(myIMU.begin(sampleRate, 1, 1, 1, accelRange) == 0)
-//        {
-//          Serial.print("IMU initialized.\n");
-//          delay(100);
-//          myIMU.intConf(INT_1, DET_MOVE, 13, 0);
-//          myIMU.readRegister(&readData, LIS3DH_INT1_CFG);
-//          myIMU.readRegisterInt16( &sensor.x, LIS3DH_OUT_X_L );
-//          myIMU.readRegisterInt16( &sensor.y, LIS3DH_OUT_Y_L );
-//          myIMU.readRegisterInt16( &sensor.z, LIS3DH_OUT_Z_L );
-//          mydata[i++] = (sensor.x>>8) & 0xFF;
-//          mydata[i++] = (sensor.x)    & 0xFF;
-//          mydata[i++] = (sensor.y>>8) & 0xFF;
-//          mydata[i++] = (sensor.y)    & 0xFF;
-//          mydata[i++] = (sensor.z>>8) & 0xFF;
-//          mydata[i++] = (sensor.z)    & 0xFF;    
-//        }
-//        else
-//          Serial.print("Failed to initialize IMU.\n");
-//      }
-
       LMIC_setTxData2(sys.port, mydata, i, sys.frame_flag);
       Serial.println(F("Packet queued"));
     }
@@ -517,11 +506,37 @@ void device_send(osjob_t* j)
       mydata[i++] = devicet.sub_band;
       mydata[i++] = (devicet.battrey>>8)&0xff;
       mydata[i++] = devicet.battrey&0xff;
+      mydata[i++] = devicet.SMODE ;
+      mydata[i++] = devicet.FLAG ;      
       
       LMIC_setTxData2(sys.port, mydata, i,sys.frame_flag);
       Serial.println(F("Packet queued"));
     }
 
+    // Next TX is scheduled after TX_COMPLETE event.        
+}
+
+void Alarm_send(osjob_t* j)
+{
+    // Check if there is not a current TX/RX job running
+    if (LMIC.opmode & OP_TXRXPEND)
+    {
+      Serial.println(F("OP_TXRXPEND, not sending"));
+    }
+    else
+    {
+      int i = 0;
+      // Prepare upstream data transmission at the next possible time.
+      memset(mydata,0,50);
+      Device_status();
+      sys.port = 0x07;
+      mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
+      mydata[i++] = (sensor.bat) & 0xFF;
+      mydata[i++] = ((sys.mod<<6) | (sys.lon<<5) | sys.frame) & 0xFF;   
+      LMIC_setTxData2(sys.port, mydata, i,sys.frame_flag);
+      Serial.println(F("Packet queued"));
+    }
+    
     // Next TX is scheduled after TX_COMPLETE event.        
 }
 
@@ -580,7 +595,7 @@ static void print_wakeup_reason()
     case ESP_SLEEP_WAKEUP_EXT0 : 
       Serial.println("Wakeup caused by external signal using RTC_IO"); 
       digitalWrite(LED_PIN_RED, HIGH);
-      delay(100); 
+      delay(500); 
       digitalWrite(LED_PIN_RED, LOW);
       button_Count++;
       button_Count1 =1;
@@ -610,11 +625,6 @@ static void print_wakeup_reason()
     {
      interrupts_flag = 1;      
     }
-//    else
-//    {
-//      sys.keep_flag = 0;
-//      button_Count1 =0;
-//    }
     Serial.println("Wakeup caused by timer");
     break;
     case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
@@ -622,11 +632,13 @@ static void print_wakeup_reason()
     default :
       sys.gps_alarm = 0;
       sys.gps_start = 1;
+      sys.exit_off = 1;
       sys.alarm = 0;
       sys.alarm_count =0;
       sys.channel_single = 1;
       os_JOINED_flag = 1;
-//      sys.addr_gps_read=0;
+      Serial.println(Pro_model "," Pro_version);
+      sys.Band_information();
       sys.loggpsdata_send = 0;
       if(sys.sensor_mode ==0 )
       {
@@ -647,7 +659,16 @@ static void print_wakeup_reason()
       #if defined( CFG_as923 ) || defined( CFG_au915 ) 
 //      LMIC_setdwellTime(sys.Dwelltime);
       #endif 
-      sys.config_Write();     
+      sys.config_Write();  
+      digitalWrite(LED_PIN_BLUE, HIGH);
+      delay(500); 
+      digitalWrite(LED_PIN_BLUE, LOW); 
+      digitalWrite(LED_PIN_RED, HIGH);
+      delay(500); 
+      digitalWrite(LED_PIN_RED, LOW);   
+      digitalWrite(LED_PIN_GREEN, HIGH);
+      delay(500); 
+      digitalWrite(LED_PIN_GREEN, LOW);          
       Serial.printf("Wakeup was not caused by deep sleep: %d\r\n",wakeup_reason); 
     break;
   }
@@ -665,7 +686,7 @@ void setup() {
   os_init();
 // Reset the MAC state. Session and pending data transfers will be discarded.
   LMIC_reset();
-  LMIC_setClockError(MAX_CLOCK_ERROR * 20 / 100);
+//  LMIC_setClockError(MAX_CLOCK_ERROR * 20 / 100);
   #if defined( CFG_us915 ) || defined( CFG_au915 )
   LMIC_selectSubBand(sys.channel_single);
   #endif
@@ -809,8 +830,11 @@ void loop() {
   }   
   
   gps_send();  
-     
-  sys_sleep();
+  
+  if(sys.device_flag == 0)   
+  {
+    sys_sleep();
+  }
 }
 
 void gps_send(void)
@@ -847,6 +871,21 @@ void device_start(void)
     sys.collect_sensor_flag = true;
     os_run_flag = true;
     device_send(&sendjob);
+  }
+  if(os_run_flag == true)
+      os_runloop_once(); 
+      sys.device_flag = 0;
+      sys.gps_start = 2;
+}
+
+void Alarm_start(void)
+{
+  sys.gps_work_flag = false;
+  if(sys.gps_work_flag==false && sys.collect_sensor_flag == false )
+  {
+    sys.collect_sensor_flag = true;
+    os_run_flag = true;
+    Alarm_send(&sendjob);
   }
   if(os_run_flag == true)
       os_runloop_once(); 
@@ -921,7 +960,10 @@ void sys_sleep(void)
     Serial.flush(); 
     gpio_deep_sleep_hold_dis();
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
-    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low      
+    if(sys.exit_off == 1)
+    {
+      esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low      
+    } 
     gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
     if(turn_interrupts == 1)
     {
@@ -955,7 +997,6 @@ void alarm_state(void)
   if(sys.ble_flag == 2)
   {
     sys.exti_flag = 3;
-    sys.mod = 0;
     sys.alarm = 0; 
     sys.sensor_mode = 1;    
     sys.ble_flag = 0; 
@@ -964,13 +1005,18 @@ void alarm_state(void)
   {
     if(sys.gps_alarm == 1)
     {
-      if(sys.buzzer_flag == 1)
+      if(sys.buzzer_flag == 1 && sys.alarm_no ==1)
       {
-        buzzer();       
-        delay(5000);
-        Serial.println("stop");
-        Stop_buzzer();
-        sys.buzzer_flag = 0;
+        if(sys.lon == 1)
+        { 
+          buzzer();  
+          digitalWrite(LED_PIN_RED, LOW);     
+          delay(5000);
+//          Serial.println("stop");
+          Stop_buzzer();
+        }        
+        sys.alarm_no = 0;
+        Alarm_start();
       }
       else if(sys.buzzer_flag == 0)
       {
@@ -978,6 +1024,12 @@ void alarm_state(void)
         sys.gps_alarm =0 ;
         sys.buzzer_flag = 2;
         sys.exti_flag = 3;
+        if(sys.lon == 1)
+        {
+          digitalWrite(LED_PIN_RED, HIGH);
+          delay(1000);   
+          digitalWrite(LED_PIN_RED, LOW);  
+        }          
       }
     }
     if(sys.alarm_count == 60)
@@ -1125,7 +1177,11 @@ void alarm_state(void)
         timerAttachInterrupt(timer, &onTimer, true);
         timerAlarmWrite(timer, sys.Positioning_time*1000, true);
         timerAlarmEnable(timer); 
-        sys.exti_flag = 4;         
+        sys.exti_flag = 4; 
+        if(sys.ble_flag == 0)
+        {
+           sys.sensor_mode = 3;       
+        }
       }
       else if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
       {      
@@ -1173,6 +1229,12 @@ void LIS3DH_configIntterupts(void)
 static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
 {
   bool store_flag = false;
+  if(sys.lon == 1)
+  {
+    digitalWrite(LED_PIN_GREEN, HIGH);
+    delay(1000); 
+    digitalWrite(LED_PIN_GREEN, LOW); 
+  }    
   switch (AppData[0] & 0xff)
   {
     case 0x01:
@@ -1188,7 +1250,7 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
         {
           store_flag = true;
           sys.tdc = ServerSetTDC * 1000;
-          sys.sys_time = ServerSetTDC * 1000;
+          sys.sys_time = ServerSetTDC * 1000;         
         }
       }
     }
@@ -1206,11 +1268,9 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
           sys.config_Write(); 
           if(sys.lon == 1)
           {
-            digitalWrite(LED_PIN_RED, HIGH); 
             digitalWrite(LED_PIN_BLUE, HIGH);
             if (millis() - Exit_Alarm > 5000)
             {
-              digitalWrite(LED_PIN_RED, LOW);  
               digitalWrite(LED_PIN_BLUE, LOW);  
               Exit_Alarm = millis();
             }   
@@ -1246,6 +1306,7 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
     break;    
     case 0x05:
     {
+      store_flag = true;
       if (AppData_Len == 2 && AppData[1] == 0x01) //---->AT+CFM=1
       {
         sys.frame_flag =1;
@@ -1278,9 +1339,12 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
     case 0x23:
     {
       store_flag = true;
-      if( AppData_Len == 2 )
+      if(( AppData_Len == 2 )&&(AppData[1]==0x01)) 
       {
-        sys.port = AppData[1];
+        sys.gps_start = 1;
+        Serial.println("device");
+        sys.device_flag = 1;
+        sys.collect_sensor_flag = false;
       }
     }    
     break;
@@ -1315,7 +1379,7 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
         sys.mod = AppData[1];
         sys.save_mode = AppData[1];
        }
-       if(AppData_Len == 3 )//AT+MD = 1
+       if(AppData_Len == 3 )//AT+SMOD = 1,0
        {
         sys.sensor_mode = AppData[1];
         sys.save_sensor_mode = AppData[1];
@@ -1398,6 +1462,7 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
     break;  
     case 0xb2:
     {
+      store_flag = true;
       if (AppData_Len == 7) //---->AT+BLEMASK
       {
         for(int a=1,b=0;a < AppData_Len;a++)
