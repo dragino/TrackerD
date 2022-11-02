@@ -47,7 +47,10 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
           strManufacturerData.copy((char *)cManufacturerData, strManufacturerData.length(), 0);      
           if (strManufacturerData.length() == 25 && cManufacturerData[0] == 0x4C && cManufacturerData[1] == 0x00 && strlen(pHex) == 50)
           {
-            digitalWrite(2, HIGH);
+            if(sys.lon == 1)
+            {
+              digitalWrite(2, HIGH);
+            }
             BLEBeacon oBeacon = BLEBeacon();
             oBeacon.setData(strManufacturerData);
             Serial.println("Found an iBeacon!");
@@ -78,43 +81,116 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             memset(bufftest,0,sizeof(bufftest));
             memcpy(bufftest,pHex+8,strlen(pHex)-8);
             strcat(bufftest,brssi);         
-            //如果找到的UUID相同，且RSSI大於-80時，亮燈
-            if(strstr(bufftest,sys.blemask_data) != NULL && bRSSI >= -90)
+            if((strlen(sys.blemask_data)<6 ||( sys.blemask_data[0] == '0' && sys.blemask_data[1] == '0' & sys.blemask_data[2] == '0' & sys.blemask_data[3] == '0' & sys.blemask_data[4] == '0' & sys.blemask_data[5] == '0'))&& bRSSI >= -90)
             {
               sc_count++;  
               sys.exti_flag = 0;
-              Serial.printf("bufftest:%s\r\n", bufftest);
-              Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
+              if(sys.showid == 1)
+              {
+                Serial.printf("blemask_data\r\n",sys.blemask_data);
+                Serial.printf("bufftest:%s\r\n", bufftest);
+                Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
+              }
               strcat(sys.BLEDATA,bufftest);
               if(sc_count == 1)
               {
                 memcpy(sys.BLEDATA1,pHex+8,strlen(pHex)-8); 
                 strcat(sys.BLEDATA1,brssi);
-                Serial.printf("BLEDATA1:%s\r\n", sys.BLEDATA1);
+                if(sys.showid == 1)
+                {
+                  Serial.printf("BLEDATA1:%s\r\n", sys.BLEDATA1);
+                }
               }
               if(sc_count == 2)
               {
                 memcpy(sys.BLEDATA2,pHex+8,strlen(pHex)-8);
                 strcat(sys.BLEDATA2,brssi);
-                Serial.printf("BLEDATA2:%s\r\n", sys.BLEDATA2);
+                if(sys.showid == 1)
+                {
+                  Serial.printf("BLEDATA2:%s\r\n", sys.BLEDATA2);
+                }
               }
               if(sc_count == 3)
               {
                 memcpy(sys.BLEDATA3,pHex+8,strlen(pHex)-8); 
                 strcat(sys.BLEDATA3,brssi);
-                Serial.printf("BLEDATA3:%s\r\n", sys.BLEDATA3);
+                if(sys.showid == 1)
+                {
+                  Serial.printf("BLEDATA3:%s\r\n", sys.BLEDATA3);
+                }
               }
               if(sc_count == 4)
               {
                 memcpy(sys.BLEDATA4,pHex+8,strlen(pHex)-8); 
                 strcat(sys.BLEDATA4,brssi);
-                Serial.printf("BLEDATA4:%s\r\n", sys.BLEDATA4);
+                if(sys.showid == 1)
+                {
+                  Serial.printf("BLEDATA4:%s\r\n", sys.BLEDATA4);
+                }
               }
               if(sc_count == 5)
               {
                 memcpy(sys.BLEDATA5,pHex+8,strlen(pHex)-8); 
                 strcat(sys.BLEDATA5,brssi);
-                Serial.printf("BLEDATA5:%s\r\n", sys.BLEDATA5);
+                if(sys.showid == 1)
+                {
+                  Serial.printf("BLEDATA5:%s\r\n", sys.BLEDATA5);
+                }
+              }              
+            }
+            else if(strstr(bufftest,sys.blemask_data) != NULL && bRSSI >= -90)
+            {
+              sc_count++;  
+              sys.exti_flag = 0;
+              if(sys.showid == 1)
+              {
+                Serial.printf("bufftest:%s\r\n", bufftest);
+                Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
+              }
+              strcat(sys.BLEDATA,bufftest);
+              if(sc_count == 1)
+              {
+                memcpy(sys.BLEDATA1,pHex+8,strlen(pHex)-8); 
+                strcat(sys.BLEDATA1,brssi);
+                if(sys.showid == 1)
+                {
+                  Serial.printf("BLEDATA1:%s\r\n", sys.BLEDATA1);
+                }
+              }
+              if(sc_count == 2)
+              {
+                memcpy(sys.BLEDATA2,pHex+8,strlen(pHex)-8);
+                strcat(sys.BLEDATA2,brssi);
+                {
+                  Serial.printf("BLEDATA2:%s\r\n", sys.BLEDATA2);
+                }
+              }
+              if(sc_count == 3)
+              {
+                memcpy(sys.BLEDATA3,pHex+8,strlen(pHex)-8); 
+                strcat(sys.BLEDATA3,brssi);
+                if(sys.showid == 1)
+                {
+                  Serial.printf("BLEDATA3:%s\r\n", sys.BLEDATA3);
+                }
+              }
+              if(sc_count == 4)
+              {
+                memcpy(sys.BLEDATA4,pHex+8,strlen(pHex)-8); 
+                strcat(sys.BLEDATA4,brssi);
+                if(sys.showid == 1)
+                {
+                 Serial.printf("BLEDATA4:%s\r\n", sys.BLEDATA4);
+                }
+              }
+              if(sc_count == 5)
+              {
+                memcpy(sys.BLEDATA5,pHex+8,strlen(pHex)-8); 
+                strcat(sys.BLEDATA5,brssi);
+                if(sys.showid == 1)
+                {
+                   Serial.printf("BLEDATA5:%s\r\n", sys.BLEDATA5);
+                }
               }
             }
           }
@@ -133,6 +209,7 @@ void ble_init()
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
   pBLEScan->setInterval(100);
   pBLEScan->setWindow(99); // less or equal setInterval value
+  sc_count = 0;   
   pinMode(2, OUTPUT);
 }
 
@@ -156,7 +233,6 @@ void ble_data(void)
     for(int i = 0;i<strlen(sys.BLEDATA);i++)
     {
       Serial.printf("%c",sys.BLEDATA[i]);
-      sys.mod = 3;
     }
     Serial.println("");
     int len = strlen(sys.BLEDATA)/45;
@@ -170,11 +246,11 @@ void ble_data(void)
         for(int a = 0;a<3;a++)     
         {
           strncpy(bmin,&sys.BLEDATA[42],3);   
-          Serial.printf("bmin:%s\r\n", bmin);
+//          Serial.printf("bmin:%s\r\n", bmin);
           for(int i =0;i<strlen(sys.BLEDATA)/45-1;i++)
           {
             strncpy(bmax,sys.BLEDATA+(45*(i+1)+42),3); 
-            Serial.printf("bmax:%s\r\n", bmax);
+//            Serial.printf("bmax:%s\r\n", bmax);
             if(strcmp(bmin,bmax)>0)
             {
               strncpy(bmin,bmax,3);
@@ -213,19 +289,22 @@ void ble_data(void)
         {
          memset(sys.BLEDATA3,0,sizeof(sys.BLEDATA3));  
         }
-        Serial.printf("DATA1:%s\r\n", sys.BLEDATA1);
-        Serial.printf("DATA2:%s\r\n", sys.BLEDATA2);
-        Serial.printf("DATA3:%s\r\n", sys.BLEDATA3);          
+        if(sys.showid == 1)
+        {
+          Serial.printf("DATA1:%s\r\n", sys.BLEDATA1);
+          Serial.printf("DATA2:%s\r\n", sys.BLEDATA2);
+          Serial.printf("DATA3:%s\r\n", sys.BLEDATA3);      
+        }    
     }
     else if(sys.ble_mod == 1) //Find the optimal beacon
     {
       strncpy(bmin,&sys.BLEDATA[42],3);
       num = 0;   
-      Serial.printf("bmin:%s\r\n", bmin);
+//      Serial.printf("bmin:%s\r\n", bmin);
       for(int i =0;i<strlen(sys.BLEDATA)/45-1;i++)
       {
         strncpy(bmax,sys.BLEDATA+(45*(i+1)+42),3); 
-        Serial.printf("bmax:%s\r\n", bmax);
+//        Serial.printf("bmax:%s\r\n", bmax);
         if(strcmp(bmin,bmax)>0)
         {
           strncpy(bmin,bmax,3);
@@ -234,17 +313,20 @@ void ble_data(void)
       }
       sys.ble_flag = 1;
       strncpy(sys.BLEDATA1,sys.BLEDATA+(num*45),45);
-      Serial.printf("BLEDATA1:%s\r\n", sys.BLEDATA1);   
+      if(sys.showid == 1)
+      {
+        Serial.printf("BLEDATA1:%s\r\n", sys.BLEDATA1);   
+      }
     } 
-    sc_count = 0;   
   }
   else if(sys.sensor_mode == 2 && sc_count == 0)
   {
-    sys.ble_flag = 1;
+    
     for(int i=0;i<45;i++)
     {
       sys.BLEDATA1[i]= {'f'};
-    }   
+    }
+    sys.ble_flag = 1;   
   }
   else if(strstr(bufftest,sys.blemask_data) == NULL && sc_count == 0)
   {

@@ -416,10 +416,10 @@ ATEerror_t at_ftime_get(const char *param)
 ATEerror_t at_ftime_set(const char *param)
 {
   uint32_t Positioning_time = atoi(param);
-  if(Positioning_time > 0xFFFFFFFF || Positioning_time<60)
-  {
-    return AT_PARAM_ERROR;
-  }
+//  if(Positioning_time > 0xFFFFFFFF || Positioning_time<60)
+//  {
+//    return AT_PARAM_ERROR;
+//  }
   sys.Positioning_time = Positioning_time*1000;
   return AT_OK;
 }
@@ -429,16 +429,13 @@ ATEerror_t at_lon_get(const char *param)
 {
   if(keep)
     Serial.print(AT LON "=");
-  Serial.println((sys.lon==2?0:1));
+  Serial.println(sys.lon);
   return AT_OK;
 }
 ATEerror_t at_lon_set(const char *param)
 {
-  uint32_t is_on = atoi(param);
-  if(is_on == 0)
-    is_on = 2;
-  
-  if(is_on != 2 || is_on!=1)
+  uint32_t is_on = atoi(param); 
+  if(is_on >=2)
   {
     return AT_PARAM_ERROR;
   }
@@ -544,41 +541,41 @@ ATEerror_t at_CHE_get(const char *param)
   if(keep)
     Serial.print(AT CHE "=");
   Serial.println(sys.channel_single);
-  double frel;
-  double j,k,l;
-  #if defined( CFG_us915 )
-  if(sys.channel_single == 9)
-  {
-    j=902.2; k=0.1;l=1.6;
-  }
-  else
-  {
-    j=902.3;k=1.6;l=0.2;
-  }
-  #else
-  if(sys.channel_single == 10)
-  {
-    j=915.0;k=0.1;l=1.6;
-  }
-  else
-  {
-    j=915.2;k=1.6;l=0.2;
-  }
-  #endif
-  if(sys.channel_single)
-  {
-    frel=j+(sys.channel_single-1)*k;
-    for(int i=0;i<8;i++)
-    {
-      Serial.printf("%0.1f",frel);
-      frel=frel+1;
-    }
-    Serial.printf("\n\r");
-  }
-  else
-  {
-     Serial.println("Use default channel");
-  }
+//  double frel;
+//  double j,k,l;
+//  #if defined( CFG_us915 )
+//  if(sys.channel_single == 8)
+//  {
+//    j=902.2; k=0.1;l=1.6;
+//  }
+//  else
+//  {
+//    j=902.3;k=1.6;l=0.2;
+//  }
+//  #else
+//  if(sys.channel_single == 9)
+//  {
+//    j=915.0;k=0.1;l=1.6;
+//  }
+//  else
+//  {
+//    j=915.2;k=1.6;l=0.2;
+//  }
+//  #endif
+//  if(sys.channel_single)
+//  {
+//    frel=j+(sys.channel_single-1)*k;
+//    for(int i=0;i<8;i++)
+//    {
+//      Serial.printf("%0.1f",frel);
+//      frel=frel+1;
+//    }
+//    Serial.printf("\n\r");
+//  }
+//  else
+//  {
+//     Serial.println("Use default channel");
+//  }
   return AT_OK;
 }
 ATEerror_t at_CHE_set(const char *param)
@@ -586,30 +583,31 @@ ATEerror_t at_CHE_set(const char *param)
   uint32_t is_on = atoi(param);
   if(strlen(param)!=1)
     return AT_PARAM_ERROR; 
-  #if defined( CFG_us915 )
-  if(is_on > 8)
+//  #if defined( CFG_us915 )
+  if(is_on > 9)
   {
-    is_on = 1;
-    Serial.println("Error Subband, must be 0 ~ 8");
+//    is_on = 1;
+    AT_PARAM_ERROR;
   }    
-  else
-  {
+//  else
+//  {
+//    Serial.println("Attention:Take effect after ATZ");
+//  }
+//  #elif defined( CFG_au915 )
+//  if(is_on > 9)
+//  {
+//    is_on = 1;
+//    Serial.println("Error Subband, must be 0 ~ 8");
+//  }    
+//  else
+//  {
     Serial.println("Attention:Take effect after ATZ");
-  }
-  #elif defined( CFG_au915 )
-  if(is_on > 8)
-  {
-    is_on = 1;
-    Serial.println("Error Subband, must be 0 ~ 8");
-  }    
-  else
-  {
-    Serial.println("Attention:Take effect after ATZ");
-  }
-  #else
-  is_on = 0;
-  #endif  
+//  }
+//  #else
+//  is_on = 0;
+//  #endif  
   sys.channel_single = is_on;
+  Serial.printf("sys.channel_single:%d\r\n",sys.channel_single); 
   return AT_OK;  
 }
 
@@ -668,12 +666,12 @@ ATEerror_t at_dwelltime_set(const char *param)
   return AT_OK;
 }
 
-/**************       AT_DWELLT       **************/
+/**************       AT_BLEMASK       **************/
 ATEerror_t at_blemask_get(const char *param)
 {
  if(keep)
   Serial.print(AT BLEMASK "=");
- if(strlen(sys.blemask_data)==6)
+ if(strlen(sys.blemask_data)<=10)
  {
   for(int i=0;i<strlen(sys.blemask_data);i++)
   {
@@ -686,7 +684,7 @@ ATEerror_t at_blemask_get(const char *param)
 ATEerror_t at_blemask_set(const char *param)
 {
   int i = strlen(param);
-  if(i == 6)
+  if(i <= 10)
   {
     for(int a=0,b=0;a<strlen(param);a++)
     {
@@ -700,6 +698,56 @@ ATEerror_t at_blemask_set(const char *param)
   return AT_OK;
 }
 
+/**************       AT_WiFiMASK       **************/
+ATEerror_t at_wifimask_get(const char *param)
+{
+ if(keep)
+  Serial.print(AT WiFiMASK "=");
+ if(strlen(sys.wifimask_data)<=10)
+ {
+  for(int i=0;i<strlen(sys.wifimask_data);i++)
+  {
+     Serial.printf("%c",sys.wifimask_data[i]);
+  }
+  Serial.println();  
+ }
+ return AT_OK;
+}
+ATEerror_t at_wifimask_set(const char *param)
+{
+  int i = strlen(param);
+  if(i <= 10)
+  {
+    for(int a=0,b=0;a<strlen(param);a++)
+    {
+      sys.wifimask_data[b++] = *(param+a);
+    }
+  }
+  else
+  {
+    return AT_PARAM_ERROR;
+  }
+  return AT_OK;
+}
+
+/**************       AT_SHOWID       **************/
+ATEerror_t at_showid_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT SHOWID  "=");
+  Serial.println(sys.showid);
+  return AT_OK;
+}
+ATEerror_t at_showid_set(const char *param)
+{
+ uint8_t SHOWid = atoi(param);
+  if(SHOWid > 2)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.showid = SHOWid;
+  return AT_OK;
+}
 /**************       ATInsPro       **************/
 ATEerror_t ATInsPro(char* atdata)
 {

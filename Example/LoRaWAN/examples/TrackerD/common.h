@@ -6,10 +6,11 @@
 #include "lora.h"
 #include "extiButton.h"
 #include "blescan.h"
+#include "wifiscan.h"
 
 
 #define Pro_model           "TrackerD "
-#define Pro_version         "v1.4.0 "
+#define Pro_version         "v1.4.1 "
 #define EEPROM_DATA_SIZE    256
 #define EEPROM_KEY_SIZE     68
 #define EEPROM_GPSDATA_SIZE 4096
@@ -43,13 +44,15 @@ class SYS:public LORA
     void Band_information(void);
     uint8_t     gps_data_buff[15];
     char        blemask_data[12]={'0','0','0','0','0','0'};
+    char        wifimask_data[12]={'0','0','0','0','0','0'};
     char        buff1[100];
     char        BLEDATA[1000];
     char        BLEDATA1[100];
     char        BLEDATA2[100];
     char        BLEDATA3[100];
     char        BLEDATA4[100];
-    char        BLEDATA5[100];  
+    char        BLEDATA5[100]; 
+    char        databuf[10];
     uint8_t     ble_flag =0;  
     uint32_t    tdc = 1200000;     //uint:ms
     uint32_t    mtdc = 300000;     //uint:ms
@@ -91,6 +94,7 @@ class SYS:public LORA
     uint8_t     PNACKmd = 0;
     uint8_t     keep_flag = 0;
     uint8_t     device_flag = 0;
+    uint8_t     showid = 0;
     float       pdop_value = 2.0;
     int         data_read = 0;
     bool        gps_work_flag = true;
@@ -148,6 +152,7 @@ extern Devicet devicet;
 int BatGet(void);
 void buzzer(void);
 void Stop_buzzer(void);
+void gpio_reset(void);
 void Device_status();
 void I2C_Sent(int addr,uint8_t* buff,uint8_t buff_len);
 void I2C_Read(int addr,uint8_t* buff,uint8_t buff_len,int delay_ms);

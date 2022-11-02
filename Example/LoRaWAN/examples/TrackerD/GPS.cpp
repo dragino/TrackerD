@@ -18,6 +18,7 @@ TinyGPSCustom vdop(gps, "GNGSA", 17); // $GPGSA/GNGSA sentence, 17th element
 void GPS_Init(uint8_t power_pin)
 {
   pinMode(power_pin,OUTPUT);
+  pinMode(GPS_RESET,OUTPUT);
 //  SYS();
   SerialGPS.begin(9600, SERIAL_8N1, 9, 10);
 }
@@ -31,11 +32,13 @@ void GPS_DeInit(void)
 void GPS_boot(void)
 {
   digitalWrite(GPS_POWER, HIGH);  
+  digitalWrite(GPS_RESET, LOW);
 }
 
 void GPS_shutdown(void)
 {
   digitalWrite(GPS_POWER, LOW); 
+//  digitalWrite(GPS_RESET, LOW); 
   GPS_DeInit(); 
 }
 
@@ -54,6 +57,7 @@ bool GPS_DATA(void)
         mode1 =  model.value();
         sensor.pdop_gps = gps.hdop.hdop();
         sensor.Fix_Status = mode1.toInt();
+        float latitude,longitude;
 //        Serial.print(" HDOP = ");
 //        Serial.print(sensor.pdop_gps); 
 //        Serial.print(F(" UTC=")); Serial.print(utc_time.value()); 
@@ -63,15 +67,28 @@ bool GPS_DATA(void)
 //        Serial.print("Longitude = ");
 //        Serial.println(gps.location.lng(), 6);
 
-          sensor.year_gps = gps.date.year();
-          sensor.month_gps = gps.date.month();
-          sensor.day_gps = gps.date.day();
+        sensor.year_gps = gps.date.year();
+        sensor.month_gps = gps.date.month();
+        sensor.day_gps = gps.date.day();
+
+        sensor.hour_gps = gps.time.hour();
+        sensor.minute_gps = gps.time.minute();
+        sensor.second_gps = gps.time.second();  
+        
+        if(sys.showid == 1)
+        {
+          latitude = gps.location.lat();
+          longitude = gps.location.lng();
+          Serial.printf("Latitude = %0.6f\n\r",latitude);
+          Serial.printf("Longitude = %0.6f\n\r",longitude);
+          Serial.printf("Date: %d-%d-%d\n\r",sensor.year_gps,sensor.month_gps,sensor.day_gps);
+          Serial.printf("Time: %d:%d:%d\n\r",(sensor.hour_gps<16)?sensor.hour_gps+8:sensor.hour_gps-16,sensor.minute_gps,sensor.second_gps);
+        }         
         if((sensor.year_gps!=0)&&(sensor.month_gps!=0)&&(sensor.day_gps != 2000))
         {
           if((sys.pdop_value>=sensor.pdop_gps)&&(sensor.pdop_gps!=0.0)&&(sensor.Fix_Status == 3))
   //        if((sys.pdop_value>=sensor.pdop_gps)&&(sensor.pdop_gps!=0.0))
           {
-            float latitude,longitude;
             String  latitude_string , longitiude_string,year_string,month_string,day_string,hour_string,minute_string,second_string;
             latitude = gps.location.lat();
             sensor.latitude = (int)(latitude*1000000);
@@ -80,10 +97,6 @@ bool GPS_DATA(void)
             longitude = gps.location.lng();
             sensor.longitude = (int)(longitude*1000000);
             longitiude_string = String(sensor.longitude);
-  
-            sensor.hour_gps = gps.time.hour();
-            sensor.minute_gps = gps.time.minute();
-            sensor.second_gps = gps.time.second();         
             
             Serial.printf("Latitude = %0.6f\n\r",latitude);
             Serial.printf("Longitude = %0.6f\n\r",longitude);

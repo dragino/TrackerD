@@ -80,6 +80,44 @@ void Stop_buzzer(void)
   }  
 }
 
+void gpio_reset(void)
+{
+  gpio_sleep_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_2, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_4, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_12, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_13, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_15, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_25, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_26, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_27, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_32, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_33, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_34, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_35, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_36, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_37, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_38, GPIO_MODE_INPUT);
+  gpio_set_direction(GPIO_NUM_39, GPIO_MODE_INPUT);
+//  digitalWrite(0, LOW);
+//  digitalWrite(2, LOW);
+//  digitalWrite(4, LOW);
+//  digitalWrite(12, LOW);
+//  digitalWrite(13, LOW);
+//  digitalWrite(14, LOW);
+//  digitalWrite(15, LOW);
+//  digitalWrite(25, LOW);digitalWrite(26, LOW);
+//  digitalWrite(27, LOW);digitalWrite(32, LOW);
+//  digitalWrite(33, LOW);
+//  digitalWrite(34, LOW);
+//  digitalWrite(35, LOW);
+//  digitalWrite(36, LOW);
+//  digitalWrite(37, LOW);
+//  digitalWrite(38, LOW);
+//  digitalWrite(39, LOW);  
+}
+
 void Device_status()
 {
   uint8_t freq_band;
@@ -123,36 +161,28 @@ void Device_status()
     #else
     freq_band=0x07;
     #endif
-  #elif defined( REGION_CN470 )
+  #elif defined( CFG_CN470 )
     freq_band=0x0B;
-  #elif defined( REGION_EU433 )
+  #elif defined( CFG_EU433 )
     freq_band=0x0C;
   #elif defined( CFG_kr920 ) 
     freq_band=0x0D;
-  #elif defined( REGION_MA869 ) 
+  #elif defined( CFG_MA869 ) 
     freq_band=0x0E;
   #else
     freq_band=0x00;
   #endif
   devicet.freq_band = freq_band;
   
-  #if defined( REGION_us915 ) || defined( REGION_au915 ) || defined( REGION_CN470 )
-  devicet.sub_band = sys.channel_single;
+  #if defined( CFG_us915 ) || defined( CFG_au915 )
+  devicet.sub_band = sys.channel_single; 
   #else
   devicet.sub_band = 0xff;
   #endif
 
   devicet.SMODE = ((sys.sensor_mode <<6)|(sys.mod<<4 )|sys.ble_mod) & 0xFF;
-//  Serial.printf("SMODE = %0X\n\r",devicet.SMODE);
-//  Serial.printf("sensor_mod = %d\n\r",(devicet.SMODE>>6)& 0x3f);
-//  Serial.printf("mod = %d\n\r",(devicet.SMODE>>4)& 0x03);
-//  Serial.printf("ble_mod = %d\n\r",(devicet.SMODE)& 0x0f);
 
   devicet.FLAG = ((sys.PNACKmd<<2)|(sys.lon<<1)|sys.Intwk)&0xFF;
-//  Serial.printf("FLAG= %0X\n\r",devicet.FLAG );
-//  Serial.printf("PNACKmd = %d\n\r",(devicet.FLAG)& 0x04);
-//  Serial.printf("lon = %d\n\r",(devicet.FLAG>>1)& 0x01);
-//  Serial.printf("Intwk = %d\n\r",(devicet.FLAG)& 0x01);  
   
 }
 
@@ -443,13 +473,22 @@ void SYS::config_Write(void)
   data_8 =  PNACKmd;
   DATA.writeUChar(addr1, data_8);               
   addr1 += sizeof(unsigned char);
+
+  data_8 =  showid;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);  
     
   for(uint8_t i=0;i<strlen(sys.blemask_data);i++)
   {
     DATA.writeUChar(addr1, blemask_data[i]);               
     addr1 += sizeof(unsigned char);
   }
-      
+  
+  for(uint8_t i=0;i<strlen(sys.wifimask_data);i++)
+  {
+    DATA.writeUChar(addr1, wifimask_data[i]);               
+    addr1 += sizeof(unsigned char);
+  }      
   KEY.commit();
   DATA.commit();
   addr = 0;
@@ -563,8 +602,8 @@ void SYS::config_Read(void)
 
   Positioning_time = DATA.readUInt(addr1);
   addr1 += sizeof(unsigned int);
-  if(Positioning_time == 0)
-    Positioning_time = 180000;  
+//  if(Positioning_time == 0)
+//    Positioning_time = 180000;  
 
   addr_gps_write = DATA.readUInt(addr1);
   addr1 += sizeof(unsigned int);
@@ -619,20 +658,29 @@ void SYS::config_Read(void)
   addr1 += sizeof(unsigned char);
 
   PNACKmd = DATA.readUChar(addr1);
+  addr1 += sizeof(unsigned char);   
+
+  showid = DATA.readUChar(addr1);
   addr1 += sizeof(unsigned char);       
 
   for(uint8_t i=0;i<6;i++)
   {
     sys.blemask_data[i] = DATA.readUChar(addr1);
     addr1 += sizeof(unsigned char);
-  }             
+  }   
+  for(uint8_t i=0;i<6;i++)
+  {
+    sys.wifimask_data[i] = DATA.readUChar(addr1);
+    addr1 += sizeof(unsigned char);
+  }
+            
 }
 
 void SYS::gps_data_Weite(void)
 {  
-  if(addr_gps_write == 4095)
+  if(addr_gps_write >= 4095)
   {
-   gps_write = addr_gps_write;
+   gps_write = 4095;
    addr_gps_write = 0; 
   }
    if(addr_gps_write <= 4095)

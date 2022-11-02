@@ -226,15 +226,17 @@ void onEvent (ev_t ev)
               {
                 if(sys.gps_write == sys.addr_gps_read)
                 {
-                  sys.GPSDATA_CLEAR();
+//                  sys.GPSDATA_CLEAR();
+                  sys.gps_write  = 0;                  
                   sys.addr_gps_read = 0;
-                  sys.addr_gps_write = 0;
+//                  sys.addr_gps_write = 0;
                   sys.loggpsdata_send = 0;
                 }
               }
               else if(sys.addr_gps_write == sys.addr_gps_read)
               {
                 sys.GPSDATA_CLEAR();
+                sys.gps_write  = 0; 
                 sys.addr_gps_read = 0;
                 sys.addr_gps_write = 0;
                 sys.loggpsdata_send = 0;
@@ -252,7 +254,7 @@ void onEvent (ev_t ev)
 //              #endif      
             } 
             Serial.println(F("Received ack"));           
-            send_complete = true;
+//            send_complete = true;
             break;
           }            
           else if (LMIC.txrxFlags & TXRX_NACK)
@@ -272,9 +274,9 @@ void onEvent (ev_t ev)
                 sys.gps_data_Weite();
                 sys.loggpsdata_send = 0;  
               }              
-              Serial.println(F("Received nack"));   
              } 
-            }     
+            }
+            Serial.println(F("Received nack"));        
           }
           if((LMIC.opmode & OP_NEXTCHNL)||(LMIC.opmode & OP_RNDTX))
           {
@@ -382,7 +384,7 @@ void do_send(osjob_t* j)
       }
       if(sys.loggpsdata_send == 1)
       {
-        sys.port = 2;
+        sys.port = 4;
         sys.read_gps_data_on_flash();
         Serial.printf("addr_gps_read:%d\r\n",sys.addr_gps_read);  
         mydata[i++] = sys.gps_data_buff[0] & 0xFF;
@@ -446,11 +448,11 @@ void do_send(osjob_t* j)
         }
         if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
         {
-          if(sys.ble_mod  == 1)
+          if(sys.ble_mod  == 0)
           {      
             ;                  
           }
-          else if(sys.ble_mod  == 0)
+          else if(sys.ble_mod  == 1)
           {
             sys.port = 6;
             char bleuuidmajorminjor[100]={0};
@@ -476,8 +478,33 @@ void do_send(osjob_t* j)
             mydata[i++] = num;     
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5) ) & 0xFF;                   
-          }                    
+            mydata[i++] = ((sys.ble_mod<<6) | (sys.lon<<5) ) & 0xFF;                   
+          }
+          else if(sys.ble_mod  == 2)
+          {
+            sys.port = 8;
+            Serial.println("");
+            char  Wssid[10]={0};
+            char  Wrssi[10];
+            for(int a=0;a<(strlen(sys.databuf))-3;a++)
+            {
+              Wssid[a] = sys.databuf[a];
+            }
+            for(int a=6; a<strlen(sys.databuf); a++)
+            {
+              Wrssi[a-6] = sys.databuf[a];
+            } 
+            String wrssi = Wrssi;
+            int wifirssi = wrssi.toInt(); 
+           for(int a=0;a<strlen(Wssid);a++)
+            {
+              mydata[i++] = Wssid[a];
+            }
+            mydata[i++] = wifirssi & 0xFF; 
+            mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
+            mydata[i++] = (sensor.bat) & 0xFF; 
+            mydata[i++] = ((sys.ble_mod<<6) | (sys.lon<<5) ) & 0xFF;                                            
+          }
         }
       }        
       LMIC_setTxData2(sys.port, mydata, i, sys.frame_flag);
@@ -606,9 +633,9 @@ static void print_wakeup_reason()
       {
         turn_interrupts = 1;
 //        sys.exti_flag = 0;
-        sys.alarm = 0; 
+//        sys.alarm = 0; 
         sys.sensor_mode = 1;    
-        sys.ble_flag = 0;  
+//        sys.ble_flag = 0;  
         button_Count = 0;
         interrupts_flag = 0;        
       }
@@ -635,7 +662,7 @@ static void print_wakeup_reason()
       sys.exit_off = 1;
       sys.alarm = 0;
       sys.alarm_count =0;
-      sys.channel_single = 1;
+      sys.showid = 0;
       os_JOINED_flag = 1;
       Serial.println(Pro_model "," Pro_version);
       sys.Band_information();
@@ -686,10 +713,13 @@ void setup() {
   os_init();
 // Reset the MAC state. Session and pending data transfers will be discarded.
   LMIC_reset();
-//  LMIC_setClockError(MAX_CLOCK_ERROR * 20 / 100);
-  #if defined( CFG_us915 ) || defined( CFG_au915 )
-  LMIC_selectSubBand(sys.channel_single);
-  #endif
+
+  if(sys.channel_single < 8)
+  {
+    #if defined( CFG_us915 ) || defined( CFG_au915 )
+    LMIC_selectSubBand(sys.channel_single);
+    #endif
+  }
   #if defined( CFG_as923 ) || defined( CFG_au915 ) 
   Serial.printf("sys.Dwelltime:%d\r\n",sys.Dwelltime); 
   LMIC_setdwellTime(sys.Dwelltime);
@@ -724,14 +754,18 @@ void setup() {
 //  Serial.printf("sys.alarm:%d\r\n",sys.alarm); 
 //  Serial.printf("gps_start:%d\r\n",sys.gps_start); 
 //  Serial.printf("gps_count:%d\r\n",sys.alarm_count); 
-//  Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);   
+  Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);   
+  Serial.printf("gps_write:%d\r\n",sys.gps_write);   
 //  Serial.printf("sys.Intwk:%d\r\n",sys.Intwk);
   sys.sensor_mode = sys.save_sensor_mode;  
   sensor.bat = BatGet();
-  if(sys.Intwk == 1)
+  if(sys.alarm == 0)
   {
-     LIS3DH_configIntterupts();         
-  }      
+    if(sys.Intwk == 1)
+    {
+       LIS3DH_configIntterupts();         
+    }     
+  } 
   if(sensor.bat<2840)
   {
     sys.gps_work_flag = false;
@@ -746,25 +780,42 @@ void setup() {
       GPS_Init();
       GPS_boot();
       Serial.println("Start searching for GPS...");
+      if(sys.Positioning_time != 0)
+      {
 //定时器
-      timerSemaphore = xSemaphoreCreateBinary();
-      timer = timerBegin(0, 80, true);
-      timerAttachInterrupt(timer, &onTimer, true);
-      timerAlarmWrite(timer, sys.Positioning_time*1000, true);
-      timerAlarmEnable(timer);         
+        timerSemaphore = xSemaphoreCreateBinary();
+        timer = timerBegin(0, 80, true);
+        timerAttachInterrupt(timer, &onTimer, true);
+        timerAlarmWrite(timer, sys.Positioning_time*1000, true);
+        timerAlarmEnable(timer);
+      }         
     }
     else if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
     {
       if(sys.sensor_mode == 2)
-      {
-       Serial.println("Start searching for BLE..."); 
+      {      
+        if(sys.ble_mod == 1) 
+        {  
+          Serial.println("Start searching for BLE..."); 
+        }
+        else if(sys.ble_mod == 2) 
+        {  
+          Serial.println("Start searching for WIFI..."); 
+        }        
       }
       else if(sys.sensor_mode == 3)
       {
        Serial.println("Enable ble and gps hybrid mode"); 
-      }        
-      ble_init();
-      ble_run();
+      }
+      if(sys.ble_mod == 1) 
+      {       
+        ble_init();
+        ble_run();
+      }
+      else if(sys.ble_mod == 2) 
+      {
+        wifi_scan();
+      }
       sys.mod = sys.save_mode;
     }      
     sys.alarm_count =0;
@@ -795,7 +846,7 @@ void loop() {
 
   button_attach_loop();
   
-  if(sys.Intwk == 1)
+  if(sys.Intwk == 1 && sys.alarm == 0)
   {
     if(interrupts_flag == 1)
     {
@@ -914,12 +965,17 @@ void sys_sleep(void)
         {
           sys.alarm = 0;
           sys.gps_alarm = 0;
+          if(sys.Intwk == 1)
+          {
+             LIS3DH_configIntterupts();         
+          }                
         }
         else
         {
           sys.alarm = 1;
           sys.gps_alarm = 1; 
-          SaveLMICToRTC(60000);  
+          myIMU.imu_power_down();  
+          SaveLMICToRTC(sys.atdc);  
         }
         sys.config_Write();        
       }
@@ -958,13 +1014,10 @@ void sys_sleep(void)
     hal_sleep();    
     sys.LORA_EnterSleepMode();
     Serial.flush(); 
-    gpio_deep_sleep_hold_dis();
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
-    if(sys.exit_off == 1)
-    {
-      esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low      
-    } 
+    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low       
     gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+//    gpio_reset();
     if(turn_interrupts == 1)
     {
       esp_sleep_enable_timer_wakeup(sys.mtdc*1000); //设置定时器唤醒 
@@ -997,7 +1050,6 @@ void alarm_state(void)
   if(sys.ble_flag == 2)
   {
     sys.exti_flag = 3;
-    sys.alarm = 0; 
     sys.sensor_mode = 1;    
     sys.ble_flag = 0; 
   }
@@ -1014,7 +1066,8 @@ void alarm_state(void)
           delay(5000);
 //          Serial.println("stop");
           Stop_buzzer();
-        }        
+        }  
+        myIMU.imu_power_down();       
         sys.alarm_no = 0;
         Alarm_start();
       }
@@ -1041,6 +1094,10 @@ void alarm_state(void)
       sys.exti_flag = 3;
 //      sys.gps_work_flag = false;
       sys.config_Write(); 
+      if(sys.Intwk == 1)
+      {
+         LIS3DH_configIntterupts();         
+      }       
       Serial.println("Exit Alarm");  
       if(sys.lon == 1)
       {
@@ -1088,12 +1145,17 @@ void alarm_state(void)
         {
           sys.alarm = 0;
           sys.gps_alarm = 0;
+          if(sys.Intwk == 1)
+          {
+             LIS3DH_configIntterupts();         
+          }           
         }
         else
         {
           sys.alarm = 1;
           sys.gps_alarm = 1; 
-          SaveLMICToRTC(60000);  
+          myIMU.imu_power_down();  
+          SaveLMICToRTC(sys.atdc);  
         }
         sys.config_Write();        
       }
@@ -1131,7 +1193,7 @@ void alarm_state(void)
     hal_sleep();    
     sys.LORA_EnterSleepMode();
     Serial.flush(); 
-    gpio_deep_sleep_hold_dis();
+//    gpio_deep_sleep_hold_dis();
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low      
     gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
@@ -1167,21 +1229,17 @@ void alarm_state(void)
       {
         GPS_Init();
         GPS_boot();
-        if(sys.alarm == 0)
+        Serial.println("Start searching for GPS...");
+        if(sys.Positioning_time != 0)
         {
-          Serial.println("Start searching for GPS..1."); 
-        } 
   //定时器
-        timerSemaphore = xSemaphoreCreateBinary();
-        timer = timerBegin(0, 80, true);
-        timerAttachInterrupt(timer, &onTimer, true);
-        timerAlarmWrite(timer, sys.Positioning_time*1000, true);
-        timerAlarmEnable(timer); 
-        sys.exti_flag = 4; 
-        if(sys.ble_flag == 0)
-        {
-           sys.sensor_mode = 3;       
+          timerSemaphore = xSemaphoreCreateBinary();
+          timer = timerBegin(0, 80, true);
+          timerAttachInterrupt(timer, &onTimer, true);
+          timerAlarmWrite(timer, sys.Positioning_time*1000, true);
+          timerAlarmEnable(timer);
         }
+        sys.exti_flag = 4; 
       }
       else if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
       {      
@@ -1275,6 +1333,10 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
               Exit_Alarm = millis();
             }   
           } 
+          if(sys.Intwk == 1)
+          {
+             LIS3DH_configIntterupts();         
+          }           
           Serial.println("Exit Alarm");          
       }
     }
@@ -1370,7 +1432,16 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
       }
       #endif 
     }    
-    break;      
+    break;   
+    case 0x34:
+    {
+      store_flag = true;
+      if( AppData_Len == 2 )
+      {
+        sys.PNACKmd = AppData[1];
+      }
+    }    
+    break;        
     case 0xa5:
     {
        store_flag = true;

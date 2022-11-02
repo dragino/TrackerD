@@ -33,8 +33,10 @@
 #define NMEA886       "+NMEA886"
 #define DWELLT        "+DWELLT"
 #define BLEMASK       "+BLEMASK"
+#define WiFiMASK      "+wifiMASK"
 #define INTWK         "+INTWK"
 #define PNACKMD       "+PNACKMD"
+#define SHOWID        "+SHOWID"
 
 typedef enum
 {
@@ -126,8 +128,12 @@ ATEerror_t at_dwelltime_get(const char *param);
 ATEerror_t at_dwelltime_set(const char *param);
 ATEerror_t at_blemask_get(const char *param);
 ATEerror_t at_blemask_set(const char *param);
+ATEerror_t at_wifimask_get(const char *param);
+ATEerror_t at_wifimask_set(const char *param);
 ATEerror_t at_pnackmd_get(const char *param);
 ATEerror_t at_pnackmd_set(const char *param);
+ATEerror_t at_showid_get(const char *param);
+ATEerror_t at_showid_set(const char *param);
 
 static const struct ATCommand_s ATCommand[] =
 {
@@ -440,7 +446,19 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_dwelltime_set,
     .run = at_return_error,
   }, 
-/**************** AT+DWELLT ****************/  
+
+/**************** AT+SHOWID ****************/  
+  {
+    .string = AT SHOWID,
+    .size_string = sizeof(SHOWID) - 1,
+#ifndef NO_HELP
+    .help_string = AT SHOWID "     : Get or Set SHOWID",
+#endif
+    .get = at_showid_get,
+    .set = at_showid_set,
+    .run = at_return_error,
+  },   
+/**************** AT+BLEMASK ****************/  
   {
     .string = AT BLEMASK,
     .size_string = sizeof(BLEMASK) - 1,
@@ -451,7 +469,17 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_blemask_set,
     .run = at_return_error,
   }, 
-    
+/**************** AT+WiFiMASK ****************/  
+  {
+    .string = AT WiFiMASK,
+    .size_string = sizeof(WiFiMASK) - 1,
+#ifndef NO_HELP
+    .help_string = AT WiFiMASK "     : Get or Set WiFi MASK",
+#endif
+    .get = at_wifimask_get,
+    .set = at_wifimask_set,
+    .run = at_return_error,
+  },    
 };
 
 ATEerror_t ATInsPro(char* atdata);

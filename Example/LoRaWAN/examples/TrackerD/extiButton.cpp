@@ -40,28 +40,40 @@ void attachLongPressStart()
 void attachDuringLongPress()
 {   
     sys.sleep_flag = 1;
-    digitalWrite(LED_PIN_GREEN, HIGH);
+    if(sys.lon == 1)
+    {    
+        digitalWrite(LED_PIN_GREEN, HIGH);
+    }
     if (millis() - ALARM_START > 5000 && millis() - ALARM_START  < 10000)
     {
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 0;
-      digitalWrite(LED_PIN_RED, HIGH);
-      digitalWrite(LED_PIN_GREEN, HIGH);
+      if(sys.lon == 1)
+      {
+        digitalWrite(LED_PIN_RED, HIGH);
+        digitalWrite(LED_PIN_GREEN, HIGH);
+      }
     }
     else if (millis() - ALARM_START > 10000 && millis() - ALARM_START  < 30000)
     {
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 1;
       operate_flag = 1;
-      digitalWrite(LED_PIN_RED, HIGH);
-      digitalWrite(LED_PIN_BLUE, HIGH);
+      if(sys.lon == 1)
+      {
+        digitalWrite(LED_PIN_RED, HIGH);
+        digitalWrite(LED_PIN_BLUE, HIGH);
+      }
 //      digitalWrite(LED_PIN_GREEN, HIGH);      
     }
     else if(millis() - ALARM_START > 30000)
     {  
      digitalWrite(LED_PIN_GREEN, LOW);  
-     digitalWrite(LED_PIN_BLUE, LOW);  
-     digitalWrite(LED_PIN_RED, HIGH); 
+     digitalWrite(LED_PIN_BLUE, LOW);
+     if(sys.lon == 1)
+     {  
+        digitalWrite(LED_PIN_RED, HIGH); 
+     }
      sys.sleep_flag = 0;
      if(operate_flag == 1)
      {
@@ -105,7 +117,10 @@ void attachMultiClick()
         {
           
           operate_flag = 0;
-          digitalWrite(LED_PIN_RED, HIGH);
+          if(sys.lon == 1)
+          {
+            digitalWrite(LED_PIN_RED, HIGH);
+          }
           if (millis() - SLEEP_START > 5000)
           {
             digitalWrite(LED_PIN_RED, LOW);  
@@ -139,7 +154,10 @@ void attachMultiClick()
         sys.config_Write(); 
         if(sys.lon == 1)
         {
-          digitalWrite(LED_PIN_BLUE, HIGH);
+          if(sys.lon == 1)
+          {
+            digitalWrite(LED_PIN_BLUE, HIGH);
+          }
           if (millis() - SLEEP_START > 5000)
           {
             digitalWrite(LED_PIN_BLUE, LOW);  
@@ -194,7 +212,7 @@ void button_attach_loop(){
      }
     if (millis() - ALARM_STOP > 3000 && millis() - ALARM_STOP <= 4000)
     {
-      Serial.println("operate_flag == 2");
+//      Serial.println("operate_flag == 2");
       sys.sleep_flag =0;
       alarm();
       operate_flag = 0; 
