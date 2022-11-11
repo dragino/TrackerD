@@ -83,6 +83,7 @@ bool GPS_DATA(void)
           Serial.printf("Longitude = %0.6f\n\r",longitude);
           Serial.printf("Date: %d-%d-%d\n\r",sensor.year_gps,sensor.month_gps,sensor.day_gps);
           Serial.printf("Time: %d:%d:%d\n\r",(sensor.hour_gps<16)?sensor.hour_gps+8:sensor.hour_gps-16,sensor.minute_gps,sensor.second_gps);
+          Serial.printf("HDOP = %0.6f\n\r",sensor.pdop_gps);
         }         
         if((sensor.year_gps!=0)&&(sensor.month_gps!=0)&&(sensor.day_gps != 2000))
         {

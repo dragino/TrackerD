@@ -142,6 +142,7 @@ void attachMultiClick()
         sys.gps_alarm = 0;
         sys.gps_start = 2;
         sys.alarm = 0;
+        sys.keep_flag = 0;
         sys.alarm_count =0;
         sys.gps_work_flag = false;
         if(sys.sensor_mode == 2 )

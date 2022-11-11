@@ -84,7 +84,6 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             if((strlen(sys.blemask_data)<6 ||( sys.blemask_data[0] == '0' && sys.blemask_data[1] == '0' & sys.blemask_data[2] == '0' & sys.blemask_data[3] == '0' & sys.blemask_data[4] == '0' & sys.blemask_data[5] == '0'))&& bRSSI >= -90)
             {
               sc_count++;  
-              sys.exti_flag = 0;
               if(sys.showid == 1)
               {
                 Serial.printf("blemask_data\r\n",sys.blemask_data);
@@ -141,7 +140,6 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             else if(strstr(bufftest,sys.blemask_data) != NULL && bRSSI >= -90)
             {
               sc_count++;  
-              sys.exti_flag = 0;
               if(sys.showid == 1)
               {
                 Serial.printf("bufftest:%s\r\n", bufftest);

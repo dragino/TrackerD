@@ -82,34 +82,37 @@ void Stop_buzzer(void)
 
 void gpio_reset(void)
 {
-  gpio_sleep_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_2, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_4, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_12, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_13, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_14, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_15, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_25, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_26, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_27, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_32, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_33, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_34, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_35, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_36, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_37, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_38, GPIO_MODE_INPUT);
-  gpio_set_direction(GPIO_NUM_39, GPIO_MODE_INPUT);
-//  digitalWrite(0, LOW);
-//  digitalWrite(2, LOW);
-//  digitalWrite(4, LOW);
-//  digitalWrite(12, LOW);
-//  digitalWrite(13, LOW);
-//  digitalWrite(14, LOW);
-//  digitalWrite(15, LOW);
-//  digitalWrite(25, LOW);digitalWrite(26, LOW);
-//  digitalWrite(27, LOW);digitalWrite(32, LOW);
-//  digitalWrite(33, LOW);
+  gpio_sleep_set_direction(GPIO_NUM_0, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_12, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_13, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_14, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_15, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_25, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_26, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_27, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_32, GPIO_MODE_OUTPUT);
+  gpio_set_direction(GPIO_NUM_33, GPIO_MODE_OUTPUT);
+  
+//  gpio_set_direction(GPIO_NUM_34, GPIO_MODE_OUTPUT);
+//  gpio_set_direction(GPIO_NUM_35, GPIO_MODE_OUTPUT);
+//  gpio_set_direction(GPIO_NUM_36, GPIO_MODE_OUTPUT);
+//  gpio_set_direction(GPIO_NUM_37, GPIO_MODE_OUTPUT);
+//  gpio_set_direction(GPIO_NUM_38, GPIO_MODE_OUTPUT);
+//  gpio_set_direction(GPIO_NUM_39, GPIO_MODE_OUTPUT);
+  digitalWrite(0, LOW);
+  digitalWrite(2, LOW);
+  digitalWrite(4, LOW);
+  digitalWrite(12, LOW);
+  digitalWrite(13, LOW);
+  digitalWrite(14, LOW);
+  digitalWrite(15, LOW);
+  digitalWrite(25, LOW);
+  digitalWrite(26, LOW);
+  digitalWrite(27, LOW);
+  digitalWrite(32, LOW);
+  digitalWrite(33, LOW);
 //  digitalWrite(34, LOW);
 //  digitalWrite(35, LOW);
 //  digitalWrite(36, LOW);
@@ -544,7 +547,7 @@ void SYS::config_Read(void)
 //tdc
   tdc = DATA.readUInt(addr1);
   addr1 += sizeof(unsigned int);
-  if(tdc == 0)
+  if(tdc == 0 || tdc == 4294487296)
     tdc = 1200000;
 //mtdc    
   mtdc = DATA.readUInt(addr1);
@@ -663,12 +666,12 @@ void SYS::config_Read(void)
   showid = DATA.readUChar(addr1);
   addr1 += sizeof(unsigned char);       
 
-  for(uint8_t i=0;i<6;i++)
+  for(uint8_t i=0;i<10;i++)
   {
     sys.blemask_data[i] = DATA.readUChar(addr1);
     addr1 += sizeof(unsigned char);
   }   
-  for(uint8_t i=0;i<6;i++)
+  for(uint8_t i=0;i<10;i++)
   {
     sys.wifimask_data[i] = DATA.readUChar(addr1);
     addr1 += sizeof(unsigned char);

@@ -86,7 +86,6 @@ void wifi_scan(void)
           ltoa(wrssi,WRSSI,10);
           strcat(buff_test,WRSSI);
           strcat(WIFIData,buff_test);
-          sys.exti_flag = 0;
           wifi_count = 1;
         }
         else if((strlen(sys.wifimask_data)<6 ||( sys.wifimask_data[0] == '0' && sys.wifimask_data[1] == '0' & sys.wifimask_data[2] == '0' & sys.wifimask_data[3] == '0' & sys.wifimask_data[4] == '0' & sys.wifimask_data[5] == '0'))&& wrssi >= -90)
@@ -120,7 +119,6 @@ void wifi_scan(void)
           ltoa(wrssi,WRSSI,10);
           strcat(sys.databuf,WRSSI);  
           sys.ble_flag = 1;
-          sys.exti_flag = 0;
           digitalWrite(2, LOW); 
           break;              
         }
@@ -129,14 +127,12 @@ void wifi_scan(void)
           for(int i=0;i<9;i++)
           {
            sys.databuf[i]= {'f'};
-          }
-          sys.exti_flag = 0;
+          };
           sys.ble_flag = 1; 
           digitalWrite(2, LOW);     
         }
         else if(strlen(WIFIData) == 0 && sys.sensor_mode == 3)
         {
-          sys.exti_flag = 0;
           sys.ble_flag = 2; 
           digitalWrite(2, LOW);     
         }   
@@ -161,7 +157,7 @@ void wifi_scan(void)
     memset(WIFIData,0,sizeof(WIFIData));
     digitalWrite(2, LOW);   
     sys.ble_flag = 1;
-    Serial.printf("databuf:%s\r\n", sys.databuf);   
+//    Serial.printf("databuf:%s\r\n", sys.databuf);   
   }  
   WiFi.disconnect();
   WiFi.mode(WIFI_OFF);

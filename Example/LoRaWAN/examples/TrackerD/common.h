@@ -10,7 +10,7 @@
 
 
 #define Pro_model           "TrackerD "
-#define Pro_version         "v1.4.1 "
+#define Pro_version         "v1.4.2 "
 #define EEPROM_DATA_SIZE    256
 #define EEPROM_KEY_SIZE     68
 #define EEPROM_GPSDATA_SIZE 4096

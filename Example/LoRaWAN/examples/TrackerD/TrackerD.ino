@@ -31,6 +31,8 @@ volatile SemaphoreHandle_t timerSemaphore1;
 RTC_DATA_ATTR lmic_t RTC_LMIC;
 RTC_DATA_ATTR int button_Count = 0;
 RTC_DATA_ATTR int button_Count1 = 0;
+RTC_DATA_ATTR int sport_Count = 0;
+RTC_DATA_ATTR int sport_mod = 0;
 
 
 void os_getArtEui (u1_t* buf) { sys.LORA_GetAEUI(buf);}
@@ -230,13 +232,15 @@ void onEvent (ev_t ev)
                   sys.gps_write  = 0;                  
                   sys.addr_gps_read = 0;
 //                  sys.addr_gps_write = 0;
+                  sport_mod =0;
                   sys.loggpsdata_send = 0;
                 }
               }
               else if(sys.addr_gps_write == sys.addr_gps_read)
               {
                 sys.GPSDATA_CLEAR();
-                sys.gps_write  = 0; 
+                sys.gps_write  = 0;
+                sport_mod = 0; 
                 sys.addr_gps_read = 0;
                 sys.addr_gps_write = 0;
                 sys.loggpsdata_send = 0;
@@ -244,6 +248,7 @@ void onEvent (ev_t ev)
               if(sys.addr_gps_write >=14)
               {
                 sys.loggpsdata_send = 1;
+                sport_mod =1;
               }
             }
             if((LMIC.opmode & OP_NEXTCHNL)||(LMIC.opmode & OP_RNDTX))
@@ -254,13 +259,14 @@ void onEvent (ev_t ev)
 //              #endif      
             } 
             Serial.println(F("Received ack"));           
-//            send_complete = true;
+            send_complete = true;
             break;
           }            
           else if (LMIC.txrxFlags & TXRX_NACK)
           {
             if(sys.PNACKmd == 1)
             {
+              sport_mod = 0;
              if(sys.sensor_mode == 1 && sys.frame_flag == 1)
              {
               sys.config_Read();
@@ -373,15 +379,15 @@ void do_send(osjob_t* j)
     {
       int i = 0;
       // Prepare upstream data transmission at the next possible time.
-      memset(mydata,0,50);
-      if(sys.save_sensor_mode == 3)
-      {
-        if(sys.exti_flag == 4)
-        {
-          sys.mod = 0;
-          sys.sensor_mode = 1; 
-        }
-      }
+      memset(mydata,0,50);    
+//      if(sys.save_sensor_mode == 3)
+//      {
+//        if(sys.exti_flag == 4)
+//        {
+//          sys.mod = 0;
+//          sys.sensor_mode = 1; 
+//        }
+//      }
       if(sys.loggpsdata_send == 1)
       {
         sys.port = 4;
@@ -735,7 +741,7 @@ void setup() {
   } 
   else
   {
-    if(sys.alarm == 0)
+    if(sport_mod == 0)
     {
       if(sys.loggpsdata_send == 0)
       {
@@ -759,11 +765,12 @@ void setup() {
 //  Serial.printf("sys.Intwk:%d\r\n",sys.Intwk);
   sys.sensor_mode = sys.save_sensor_mode;  
   sensor.bat = BatGet();
-  if(sys.alarm == 0)
+  if(sport_mod== 0)
   {
     if(sys.Intwk == 1)
     {
-       LIS3DH_configIntterupts();         
+       LIS3DH_configIntterupts(); 
+       Serial.printf("sport_count:%d\r\n",sport_Count);          
     }     
   } 
   if(sensor.bat<2840)
@@ -846,7 +853,7 @@ void loop() {
 
   button_attach_loop();
   
-  if(sys.Intwk == 1 && sys.alarm == 0)
+  if(sys.Intwk == 1 && sport_mod == 0)
   {
     if(interrupts_flag == 1)
     {
@@ -866,9 +873,31 @@ void loop() {
         {
            sys.keep_flag = 0;
            sys.exti_flag = 2;
-           sys.tdc = sys.tdc-sys.mtdc-10000;
-           Serial.println("interrupts_count=0");
-           interrupts_count = 0;         
+           uint32_t ss =sys.tdc-sys.mtdc;
+           Serial.printf("gps_start:%d\r\n",ss);
+           if(sport_Count == 0)
+           {
+             if(sys.tdc <= sys.mtdc)
+             {
+                sys.keep_flag = 0;
+                sys.exti_flag = 3;             
+             }
+             else
+             {
+               if(ss <20000)
+               {
+                 sys.tdc = sys.tdc-sys.mtdc;
+               }
+               else
+               {
+                 sys.tdc = sys.tdc-sys.mtdc-10000;
+               }
+               sport_Count = 1;
+               button_Count1 = 0;
+             }
+             Serial.println("interrupts_count=0");
+             interrupts_count = 0;
+           }         
         }    
       }                 
     }
@@ -1016,7 +1045,6 @@ void sys_sleep(void)
     Serial.flush(); 
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low       
-    gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
 //    gpio_reset();
     if(turn_interrupts == 1)
     {
@@ -1094,6 +1122,7 @@ void alarm_state(void)
       sys.exti_flag = 3;
 //      sys.gps_work_flag = false;
       sys.config_Write(); 
+      sys.keep_flag = 0;
       if(sys.Intwk == 1)
       {
          LIS3DH_configIntterupts();         
@@ -1265,16 +1294,32 @@ void LIS3DH_configIntterupts(void)
   myIMU.writeRegister(LIS3DH_INT1_CFG, 0x0A);
   
   uint8_t dataRead;
-
-  Serial.print("LIS3DH_INT1_SRC: 0x");
-  myIMU.readRegister(&dataRead, LIS3DH_INT1_SRC);//cleared by reading
-  Serial.println(dataRead, HEX);
-  Serial.println("Decoded events:");
+   myIMU.readRegister(&dataRead, LIS3DH_INT1_SRC);//cleared by reading
+  if(sys.showid == 1)
+  {
+    Serial.print("LIS3DH_INT1_SRC: 0x");
+    Serial.println(dataRead, HEX);
+    Serial.println("Decoded events:");
+  }
   if(dataRead & 0x40)
   {
     interrupts_count = 1;
-    Serial.println("Interrupt Active");
+    sport_Count =0 ;
+    if(sys.showid == 1)
+    {    
+      Serial.println("Interrupt Active");
+    }
   }
+  if(sport_Count == 1 )
+  {
+     interrupts_flag = 2; 
+     sys.keep_flag = 0;
+     sys.exti_flag = 3;
+     interrupts_count = 0;
+     sport_mod = 0;
+     sport_Count = 0;
+     sys.tdc = sys.sys_time;
+  }  
 //  if(dataRead & 0x20) Serial.println("Z high");
 //  if(dataRead & 0x10) Serial.println("Z low");
 //  if(dataRead & 0x08) Serial.println("Y high");
@@ -1335,7 +1380,8 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
           } 
           if(sys.Intwk == 1)
           {
-             LIS3DH_configIntterupts();         
+             LIS3DH_configIntterupts();
+             sys.keep_flag = 1;         
           }           
           Serial.println("Exit Alarm");          
       }
@@ -1534,7 +1580,7 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
     case 0xb2:
     {
       store_flag = true;
-      if (AppData_Len == 7) //---->AT+BLEMASK
+      if (AppData_Len <= 11) //---->AT+BLEMASK
       {
         for(int a=1,b=0;a < AppData_Len;a++)
         {
@@ -1542,7 +1588,19 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
         }
       }
     }
-    break;                   
+    break;   
+    case 0xb3:
+    {
+      store_flag = true;
+      if (AppData_Len <= 11) //---->AT+BLEMASK
+      {
+        for(int a=1,b=0;a < AppData_Len;a++)
+        {
+          sys.wifimask_data[b++] =AppData[a]+'0';
+        }
+      }
+    }
+    break;                     
  //...
     default:
       Serial.println("Unknown instruction");

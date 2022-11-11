@@ -684,12 +684,26 @@ ATEerror_t at_blemask_get(const char *param)
 ATEerror_t at_blemask_set(const char *param)
 {
   int i = strlen(param);
+  uint32_t s_config[32];
   if(i <= 10)
   {
     for(int a=0,b=0;a<strlen(param);a++)
     {
       sys.blemask_data[b++] = *(param+a);
     }
+    for(int i=0,j = 0;i<strlen(sys.blemask_data);i=i+4,j++)
+    {
+      s_config[0]=(sys.blemask_data[i+0]<<24)|(sys.blemask_data[i+1]<<16)|(sys.blemask_data[i+2]<<8)|(sys.blemask_data[i+3]);
+    }
+    Serial.printf("%s",s_config[0]);
+    for(int i=0,j = 0;i<3;i=i+4,j=j+4)
+    {
+      sys.blemask_data[j]= s_config[0+i]>>24;
+      sys.blemask_data[j+1]= s_config[0+i]>>16;
+      sys.blemask_data[j+2]= s_config[0+i]>>8;
+      sys.blemask_data[j+3]= s_config[0+i];
+    } 
+    Serial.printf("%s",sys.blemask_data);  
   }
   else
   {
