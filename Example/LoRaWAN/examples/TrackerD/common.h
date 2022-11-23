@@ -10,7 +10,7 @@
 
 
 #define Pro_model           "TrackerD "
-#define Pro_version         "v1.4.2 "
+#define Pro_version         "v1.4.3"
 #define EEPROM_DATA_SIZE    256
 #define EEPROM_KEY_SIZE     68
 #define EEPROM_GPSDATA_SIZE 4096
@@ -53,7 +53,8 @@ class SYS:public LORA
     char        BLEDATA4[100];
     char        BLEDATA5[100]; 
     char        databuf[10];
-    uint8_t     ble_flag =0;  
+    uint8_t     ble_flag =0; 
+    uint8_t     TF[1] ={0x14};
     uint32_t    tdc = 1200000;     //uint:ms
     uint32_t    mtdc = 300000;     //uint:ms
     uint32_t    atdc = 60000;     //uint:ms
@@ -95,7 +96,7 @@ class SYS:public LORA
     uint8_t     keep_flag = 0;
     uint8_t     device_flag = 0;
     uint8_t     showid = 0;
-    float       pdop_value = 2.0;
+    float       pdop_value = 7.0;
     int         data_read = 0;
     bool        gps_work_flag = true;
     bool        collect_sensor_flag = false; 

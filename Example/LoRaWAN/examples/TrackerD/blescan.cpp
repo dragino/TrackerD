@@ -225,14 +225,18 @@ void ble_run()
 //Bluetooth scan data processing
 void ble_data(void)
 {
+  if(sys.Intwk == 1)
+  {
+    sys.exti_flag = 4;
+  }
   if(sys.exti_flag != 3 && sc_count != 0)
   {
-    Serial.printf("DATA Length= %d\r\n",strlen(sys.BLEDATA));
-    for(int i = 0;i<strlen(sys.BLEDATA);i++)
-    {
-      Serial.printf("%c",sys.BLEDATA[i]);
-    }
-    Serial.println("");
+//    Serial.printf("DATA Length= %d\r\n",strlen(sys.BLEDATA));
+//    for(int i = 0;i<strlen(sys.BLEDATA);i++)
+//    {
+//      Serial.printf("%c",sys.BLEDATA[i]);
+//    }
+//    Serial.println("");
     int len = strlen(sys.BLEDATA)/45;
     if(strlen(sys.BLEDATA) < 135)
     {
@@ -326,12 +330,12 @@ void ble_data(void)
     }
     sys.ble_flag = 1;   
   }
-  else if(strstr(bufftest,sys.blemask_data) == NULL && sc_count == 0)
+  else if((strstr(bufftest,sys.blemask_data) == NULL && sc_count == 0)||(sys.sensor_mode == 3 && sc_count == 0))
   {
     if(sys.sensor_mode == 3)
     {
       sys.ble_flag = 2;
     }
-  }   
+  }
   digitalWrite(2, LOW);
 }

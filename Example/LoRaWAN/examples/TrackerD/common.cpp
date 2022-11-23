@@ -9,6 +9,12 @@ int freq = 2000;//设置频率
 int channel = 0;//通道号，取值0 ~ 15
 int resolution = 8;//计数位数，2的8次幂=256
 
+uint32_t s_config[32] = {0};
+uint8_t config_count =0;
+
+uint32_t s_config1[32] = {0};
+uint8_t config_count1 =0;
+
 //// Instantiate eeprom objects with parameter/argument names and sizes
 EEPROMClass  KEY("eeprom0");
 EEPROMClass  DATA("eeprom1");
@@ -480,18 +486,27 @@ void SYS::config_Write(void)
   data_8 =  showid;
   DATA.writeUChar(addr1, data_8);               
   addr1 += sizeof(unsigned char);  
+
+  data_8 = pdop_value;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);   
+
+  DATA.writeUChar(addr1, sys.TF[0]);               
+  addr1 += sizeof(unsigned char);     
     
-  for(uint8_t i=0;i<strlen(sys.blemask_data);i++)
+  for(int i=0,j = 0;i<strlen(sys.blemask_data);i=i+4,j++)
   {
-    DATA.writeUChar(addr1, blemask_data[i]);               
+    s_config[config_count++]=(sys.blemask_data[i+0]<<24)|(sys.blemask_data[i+1]<<16)|(sys.blemask_data[i+2]<<8)|(sys.blemask_data[i+3]);
+    DATA.writeUChar(addr1, s_config[config_count++]);               
     addr1 += sizeof(unsigned char);
   }
   
-  for(uint8_t i=0;i<strlen(sys.wifimask_data);i++)
+  for(int i=0,j = 0;i<strlen(sys.wifimask_data);i=i+4,j++)
   {
-    DATA.writeUChar(addr1, wifimask_data[i]);               
+    s_config1[config_count1++]=(sys.wifimask_data[i+0]<<24)|(sys.wifimask_data[i+1]<<16)|(sys.wifimask_data[i+2]<<8)|(sys.wifimask_data[i+3]);
+    DATA.writeUChar(addr1, s_config1[config_count1++]);               
     addr1 += sizeof(unsigned char);
-  }      
+  }     
   KEY.commit();
   DATA.commit();
   addr = 0;
@@ -664,18 +679,33 @@ void SYS::config_Read(void)
   addr1 += sizeof(unsigned char);   
 
   showid = DATA.readUChar(addr1);
-  addr1 += sizeof(unsigned char);       
+  addr1 += sizeof(unsigned char); 
 
-  for(uint8_t i=0;i<10;i++)
+  pdop_value = DATA.readUChar(addr1);
+  addr1 += sizeof(unsigned char);     
+
+  sys.TF[0] = DATA.readUChar(addr1);
+  addr1 += sizeof(unsigned char); 
+
+  for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
-    sys.blemask_data[i] = DATA.readUChar(addr1);
-    addr1 += sizeof(unsigned char);
-  }   
-  for(uint8_t i=0;i<10;i++)
+    s_config[i] = DATA.readUChar(addr1);
+    addr1 += sizeof(unsigned char); 
+    blemask_data[j]= s_config[0+i]>>24;
+    blemask_data[j+1]= s_config[0+i]>>16;
+    blemask_data[j+2]= s_config[0+i]>>8;
+    blemask_data[j+3]= s_config[0+i];
+  } 
+
+  for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
-    sys.wifimask_data[i] = DATA.readUChar(addr1);
-    addr1 += sizeof(unsigned char);
-  }
+    s_config1[i] = DATA.readUChar(addr1);
+    addr1 += sizeof(unsigned char); 
+    wifimask_data[j]= s_config1[0+i]>>24;
+    wifimask_data[j+1]= s_config1[0+i]>>16;
+    wifimask_data[j+2]= s_config1[0+i]>>8;
+    wifimask_data[j+3]= s_config1[0+i];
+  } 
             
 }
 

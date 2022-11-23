@@ -18,6 +18,7 @@ int fcnt_flag = 0;
 int turn_interrupts = 0;
 int interrupts_count = 0;
 int interrupts_flag = 0;
+int EXIT_flag = 0;
 unsigned long buzzerlast = 0UL;
 unsigned long Exit_Alarm = 0UL;
 
@@ -33,6 +34,7 @@ RTC_DATA_ATTR int button_Count = 0;
 RTC_DATA_ATTR int button_Count1 = 0;
 RTC_DATA_ATTR int sport_Count = 0;
 RTC_DATA_ATTR int sport_mod = 0;
+RTC_DATA_ATTR int ack_datalog =0;
 
 
 void os_getArtEui (u1_t* buf) { sys.LORA_GetAEUI(buf);}
@@ -234,6 +236,17 @@ void onEvent (ev_t ev)
 //                  sys.addr_gps_write = 0;
                   sport_mod =0;
                   sys.loggpsdata_send = 0;
+                  if(sys.Intwk == 1 && fcnt_flag == 0 && (LMIC.seqnoUp-1 > 1))
+                  {
+                     button_Count1 = 1;
+                     LIS3DH_configIntterupts();       
+                  }
+                  if(ack_datalog == 1) 
+                  {
+                   turn_interrupts = 0;
+                   ack_datalog = 0;
+                   button_Count1 = 0;
+                  }
                 }
               }
               else if(sys.addr_gps_write == sys.addr_gps_read)
@@ -244,11 +257,30 @@ void onEvent (ev_t ev)
                 sys.addr_gps_read = 0;
                 sys.addr_gps_write = 0;
                 sys.loggpsdata_send = 0;
+                if(sys.Intwk == 1 && fcnt_flag == 0 && (LMIC.seqnoUp-1 > 1))
+                {
+                  button_Count1 = 1;
+                  LIS3DH_configIntterupts();       
+                }
+                if(ack_datalog == 1) 
+                {
+                 turn_interrupts = 0;
+                 ack_datalog = 0;
+                 button_Count1 = 0;
+                }                                 
               }
               if(sys.addr_gps_write >=14)
               {
                 sys.loggpsdata_send = 1;
-                sport_mod =1;
+                if(sys.Intwk == 1 )
+                {
+                  sport_mod =1;
+                  sys.alarm = 0;
+                  ack_datalog = 1;
+                  button_Count1 = 1;
+                  turn_interrupts = 0;
+                  sys.exti_flag  = 5;
+                }
               }
             }
             if((LMIC.opmode & OP_NEXTCHNL)||(LMIC.opmode & OP_RNDTX))
@@ -266,7 +298,7 @@ void onEvent (ev_t ev)
           {
             if(sys.PNACKmd == 1)
             {
-              sport_mod = 0;
+             sport_mod = 0;
              if(sys.sensor_mode == 1 && sys.frame_flag == 1)
              {
               sys.config_Read();
@@ -275,14 +307,34 @@ void onEvent (ev_t ev)
                 sys.GPSDATA_CLEAR();
                 sys.addr_gps_write =0 ;
               }
-             if(sensor.latitude !=0 && sensor.longitude !=0)
+              else if(sensor.latitude !=0 && sensor.longitude !=0)
               {
                 sys.gps_data_Weite();
                 sys.loggpsdata_send = 0;  
-              }              
+              }
+              sys.loggpsdata_send = 0;
              } 
-            }
-            Serial.println(F("Received nack"));        
+             if(sys.Intwk == 1 && fcnt_flag == 0 && (LMIC.seqnoUp-1 > 1) && button_Count1 == 0)
+             {
+                sport_mod =0;
+                sys.alarm = 0;
+                ack_datalog = 0;
+                button_Count1 = 0;
+                turn_interrupts = 0;
+              }             
+            }           
+            sys.loggpsdata_send = 0;
+            Serial.println(F("Received nack"));
+            if((LMIC.opmode & OP_NEXTCHNL)||(LMIC.opmode & OP_RNDTX))
+            {
+  //              #if defined( CFG_as923 ) || defined( CFG_au915 ) 
+                LMIC.opmode = OP_RNDTX ; 
+                LMIC.opmode |= OP_NEXTCHNL ;
+  //            sys_sleep();            
+  //              #endif     
+            }             
+            send_complete = true;
+            break;        
           }
           if((LMIC.opmode & OP_NEXTCHNL)||(LMIC.opmode & OP_RNDTX))
           {
@@ -332,6 +384,7 @@ void onEvent (ev_t ev)
           { 
             if(fcnt_flag == 1)
             {
+              button_Count1 = 0;
               Serial.println("UpLinkCounter = 0");
             }
             else
@@ -634,14 +687,11 @@ static void print_wakeup_reason()
       button_Count1 =1;
       Serial.printf("button_Count:%d\r\n",button_Count);
       sys.keep_flag =1;
+      myIMU.imu_power_down(); 
       sys.tdc = sys.sys_time;
       if(button_Count == 1)
       {
         turn_interrupts = 1;
-//        sys.exti_flag = 0;
-//        sys.alarm = 0; 
-        sys.sensor_mode = 1;    
-//        sys.ble_flag = 0;  
         button_Count = 0;
         interrupts_flag = 0;        
       }
@@ -651,12 +701,23 @@ static void print_wakeup_reason()
       sys.alarm_count = 0;
       sys.alarm = 1;
       sys.exti_flag = 0;
+      EXIT_flag = 1;
+//      turn_interrupts = 0;
+      sport_mod =0;
       Serial.println("Wakeup caused by external signal using RTC_CNTL"); 
     break;
     case ESP_SLEEP_WAKEUP_TIMER :     
     if(sys.Intwk == 1 && button_Count1 != 0 )
     {
-     interrupts_flag = 1;      
+//     Serial.println("Intwk");
+     interrupts_flag = 1;    
+    }
+    if(sys.Intwk == 0) 
+    {
+        sport_mod =0;
+        sys.alarm = 0;
+        button_Count1 = 1;
+        turn_interrupts = 0;      
     }
     Serial.println("Wakeup caused by timer");
     break;
@@ -686,6 +747,7 @@ static void print_wakeup_reason()
       {
         sys.keep_flag = 1;
       }
+      sys.tdc = sys.sys_time;
       gpio_deep_sleep_hold_dis();
       gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);       
 //      sys.Dwelltime = 1;
@@ -745,6 +807,7 @@ void setup() {
     {
       if(sys.loggpsdata_send == 0)
       {
+        sys.tdc = sys.sys_time;
         Serial.println(sys.tdc); 
       }
       else
@@ -769,8 +832,7 @@ void setup() {
   {
     if(sys.Intwk == 1)
     {
-       LIS3DH_configIntterupts(); 
-       Serial.printf("sport_count:%d\r\n",sport_Count);          
+       LIS3DH_configIntterupts();       
     }     
   } 
   if(sensor.bat<2840)
@@ -856,47 +918,53 @@ void loop() {
   if(sys.Intwk == 1 && sport_mod == 0)
   {
     if(interrupts_flag == 1)
-    {
-      LIS3DH_configIntterupts(); 
-      if (millis() - sleep_last > 5000)
+    {  
+      if (millis() - sleep_last > 2000)
       {
+        LIS3DH_configIntterupts();
         interrupts_flag = 2; 
         sleep_last = millis();
         if(interrupts_count == 1)
         {
+           sys.tdc = sys.sys_time;
            sys.keep_flag = 1;
            sys.exti_flag = 3;
-           Serial.println("interrupts_count=1");
+           turn_interrupts = 1;
+           Serial.printf("keep_flag:%d\r\n",sys.keep_flag);  
+           myIMU.imu_power_down();  
            interrupts_count = 0;
         } 
         else
         {
            sys.keep_flag = 0;
            sys.exti_flag = 2;
+           sys.tdc = sys.sys_time;  
            uint32_t ss =sys.tdc-sys.mtdc;
-           Serial.printf("gps_start:%d\r\n",ss);
            if(sport_Count == 0)
            {
              if(sys.tdc <= sys.mtdc)
              {
                 sys.keep_flag = 0;
-                sys.exti_flag = 3;             
+                sys.exti_flag = 3;  
+                button_Count1 = 0;           
              }
              else
              {
                if(ss <20000)
                {
-                 sys.tdc = sys.tdc-sys.mtdc;
+                 sys.tdc = ss;
+                 LIS3DH_configIntterupts();
                }
                else
                {
                  sys.tdc = sys.tdc-sys.mtdc-10000;
+                  LIS3DH_configIntterupts();
                }
                sport_Count = 1;
                button_Count1 = 0;
              }
-             Serial.println("interrupts_count=0");
              interrupts_count = 0;
+             turn_interrupts = 0;
            }         
         }    
       }                 
@@ -961,6 +1029,7 @@ void device_start(void)
 void Alarm_start(void)
 {
   sys.gps_work_flag = false;
+  turn_interrupts = 0;
   if(sys.gps_work_flag==false && sys.collect_sensor_flag == false )
   {
     sys.collect_sensor_flag = true;
@@ -979,6 +1048,7 @@ void sys_sleep(void)
     GXHT3x_LowPower();
     if(sys.keep_flag == 1)
     {
+//      Serial.println("imu_power_down");
       myIMU.imu_power_down();  
     }
     digitalWrite(BAT_PIN_LOW, LOW); 
@@ -1049,7 +1119,7 @@ void sys_sleep(void)
     if(turn_interrupts == 1)
     {
       esp_sleep_enable_timer_wakeup(sys.mtdc*1000); //设置定时器唤醒 
-//      Serial.printf("KEEP TDC:%d\r\n",sys.mtdc);      
+      Serial.printf("KEEP TDC:%d\r\n",sys.mtdc);      
     } 
     else
     {
@@ -1058,11 +1128,12 @@ void sys_sleep(void)
         if(sys.loggpsdata_send == 0)
         {
          esp_sleep_enable_timer_wakeup(sys.tdc*1000); //设置定时器唤醒 
-//         Serial.printf("TDC:%d\r\n",sys.tdc);
+         Serial.printf("TDC:%d\r\n",sys.tdc);
         }
         else
         {
          esp_sleep_enable_timer_wakeup(10000*1000); //设置定时器唤醒
+         Serial.printf("keep_flag:%d\r\n",sys.keep_flag);  
         }
       }
       else
@@ -1120,7 +1191,6 @@ void alarm_state(void)
       sys.alarm = 0;
       sys.alarm_count =0;
       sys.exti_flag = 3;
-//      sys.gps_work_flag = false;
       sys.config_Write(); 
       sys.keep_flag = 0;
       if(sys.Intwk == 1)
@@ -1155,12 +1225,19 @@ void alarm_state(void)
     sys.alarm_count =0;
     sys.exti_flag = 3;
     sys.config_Write();       
-    Serial.println("exti sleep mode");
+    Serial.println("sleep mode");
     GXHT3x_LowPower();
-    if(sys.Intwk == 0)
+    if(sys.Intwk == 0 || button_Count1 == 1)
     {
+//      Serial.println("imu_power_down");
       myIMU.imu_power_down();  
     }
+    if(sys.Intwk == 1 && EXIT_flag == 1)
+    {
+      EXIT_flag = 0;
+      turn_interrupts = 1;
+//      LIS3DH_configIntterupts();    
+    }   
     digitalWrite(BAT_PIN_LOW, LOW); 
     sys.config_Write();              
     if(sys.gps_start == 0)
@@ -1219,11 +1296,15 @@ void alarm_state(void)
         SaveLMICToRTC(sys.atdc);
       }  
     }  
+    
     hal_sleep();    
     sys.LORA_EnterSleepMode();
     Serial.flush(); 
 //    gpio_deep_sleep_hold_dis();
-    esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
+//    if(turn_interrupts == 0) 
+//    {
+      esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
+//    }
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low      
     gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
     if(turn_interrupts == 1)
@@ -1271,9 +1352,36 @@ void alarm_state(void)
         sys.exti_flag = 4; 
       }
       else if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
-      {      
-        ble_init();
-        ble_run();
+      {
+        if(sys.sensor_mode == 2)
+        {      
+          if(sys.ble_mod == 1) 
+          {  
+            Serial.println("Start searching for BLE..."); 
+          }
+          else if(sys.ble_mod == 2) 
+          {  
+            Serial.println("Start searching for WIFI..."); 
+          }        
+        }
+        else if(sys.sensor_mode == 3)
+        {
+         Serial.println("Enable ble and gps hybrid mode"); 
+        }
+        if(sys.ble_mod == 1) 
+        {       
+          ble_init();
+          ble_run();
+        }
+        else if(sys.ble_mod == 2) 
+        {
+          wifi_scan();
+        }                   
+        if(button_Count1  == 1)
+        {
+//          Serial.println("imu_power_down");
+          myIMU.imu_power_down();  
+        }
         sys.mod = sys.save_mode;
         sys.exti_flag = 4; 
       }     
@@ -1289,7 +1397,7 @@ void LIS3DH_configIntterupts(void)
   myIMU.writeRegister(LIS3DH_CTRL_REG3, 0x40);
   myIMU.writeRegister(LIS3DH_CTRL_REG4, 0x00);
   myIMU.writeRegister(LIS3DH_CTRL_REG5, 0x00);
-  myIMU.writeRegister(LIS3DH_INT1_THS, 0x41);
+  myIMU.writeRegister(LIS3DH_INT1_THS, sys.TF[0]);
   myIMU.writeRegister(LIS3DH_INT1_DURATION, 0x82);
   myIMU.writeRegister(LIS3DH_INT1_CFG, 0x0A);
   
@@ -1600,7 +1708,16 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
         }
       }
     }
-    break;                     
+    break;       
+    case 0xb4:
+    {
+      store_flag = true;
+      if (AppData_Len == 2) //---->AT+PT
+      {
+       sys.TF[0] =AppData[1];
+      }
+    }
+    break;                   
  //...
     default:
       Serial.println("Unknown instruction");

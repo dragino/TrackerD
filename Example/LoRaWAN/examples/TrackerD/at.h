@@ -33,11 +33,11 @@
 #define NMEA886       "+NMEA886"
 #define DWELLT        "+DWELLT"
 #define BLEMASK       "+BLEMASK"
-#define WiFiMASK      "+wifiMASK"
+#define WiFiMASK      "+WiFiMASK"
 #define INTWK         "+INTWK"
 #define PNACKMD       "+PNACKMD"
 #define SHOWID        "+SHOWID"
-
+#define PT            "+PT"
 typedef enum
 {
   AT_OK = 0,
@@ -134,7 +134,8 @@ ATEerror_t at_pnackmd_get(const char *param);
 ATEerror_t at_pnackmd_set(const char *param);
 ATEerror_t at_showid_get(const char *param);
 ATEerror_t at_showid_set(const char *param);
-
+ATEerror_t at_pt_get(const char *param);
+ATEerror_t at_pt_set(const char *param);
 static const struct ATCommand_s ATCommand[] =
 {
 /**************** AT+MODEL ****************/  
@@ -480,6 +481,18 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_wifimask_set,
     .run = at_return_error,
   },    
+  
+/**************** AT+PT ****************/  
+  {
+    .string = AT PT,
+    .size_string = sizeof(PT) - 1,
+#ifndef NO_HELP
+    .help_string = AT PT "     : Get or Set Motion Threshold",
+#endif
+    .get = at_pt_get,
+    .set = at_pt_set,
+    .run = at_return_error,
+  },  
 };
 
 ATEerror_t ATInsPro(char* atdata);

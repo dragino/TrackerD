@@ -11,9 +11,9 @@ String gogpddata="";
 
 TinyGPSCustom model(gps, "GNGSA", 2);  // $GPGSA/GNGSA sentence, 2th element
 TinyGPSCustom utc_time(gps, "$GPRMC", 1);  // $GPRMC/GNRMC sentence, 2th element
-TinyGPSCustom pdop(gps, "GNGSA", 15); // $GPGSA/GNGSA sentence, 15th element
-TinyGPSCustom hdop(gps, "GNGSA", 16); // $GPGSA/GNGSA sentence, 16th element
-TinyGPSCustom vdop(gps, "GNGSA", 17); // $GPGSA/GNGSA sentence, 17th element
+//TinyGPSCustom pdop(gps, "GNGSA", 15); // $GPGSA/GNGSA sentence, 15th element
+//TinyGPSCustom hdop(gps, "GNGSA", 16); // $GPGSA/GNGSA sentence, 16th element
+//TinyGPSCustom vdop(gps, "GNGSA", 17); // $GPGSA/GNGSA sentence, 17th element
 
 void GPS_Init(uint8_t power_pin)
 {
@@ -44,13 +44,12 @@ void GPS_shutdown(void)
 
 bool GPS_DATA(void)
 {
-  if(SerialGPS.available() > 0)
+  while (SerialGPS.available() > 0)
   {
-    
     if (gps.encode(SerialGPS.read()))
     {
 //    Every time anything is updated, print everything.
-      if (gps.altitude.isUpdated() || gps.satellites.isUpdated() || hdop.isUpdated()&& model.isUpdated()
+      if (gps.altitude.isUpdated() || gps.satellites.isUpdated() || gps.hdop.isUpdated()&& model.isUpdated()
       || gps.location.isValid() || gps.date.isUpdated() || gps.time.isUpdated() && utc_time.isUpdated())
       {
         String mode1;
@@ -83,7 +82,8 @@ bool GPS_DATA(void)
           Serial.printf("Longitude = %0.6f\n\r",longitude);
           Serial.printf("Date: %d-%d-%d\n\r",sensor.year_gps,sensor.month_gps,sensor.day_gps);
           Serial.printf("Time: %d:%d:%d\n\r",(sensor.hour_gps<16)?sensor.hour_gps+8:sensor.hour_gps-16,sensor.minute_gps,sensor.second_gps);
-          Serial.printf("HDOP = %0.6f\n\r",sensor.pdop_gps);
+          Serial.printf("PDOP = %0.2f\n\r",sensor.pdop_gps);
+          Serial.printf("Fix Status = %d\n\r",sensor.Fix_Status);
         }         
         if((sensor.year_gps!=0)&&(sensor.month_gps!=0)&&(sensor.day_gps != 2000))
         {
@@ -119,7 +119,6 @@ bool GPS_DATA(void)
             sys.gps_data_buff[i++] = (sensor.hour_gps)      & 0xFF;
             sys.gps_data_buff[i++] = (sensor.minute_gps)    & 0xFF;
             sys.gps_data_buff[i++] = (sensor.second_gps)    & 0xFF; 
-             
 //            sys.gps_data_Weite();
 //            Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);    
 //            sys.read_gps_data_on_flash();
@@ -167,40 +166,16 @@ bool GPS_DATA(void)
           }               
           return false;
         }                      
-      }         
-//      else if (gps.date.isUpdated())
-//      {
-//        Serial.print(F("DATE       Fix Age="));
-//        Serial.print(gps.date.age());
-//        Serial.print(F("ms Raw="));
-//        Serial.print(gps.date.value());
-//        Serial.print(F(" Year="));
-//        Serial.print(gps.date.year());
-//        Serial.print(F(" Month="));
-//        Serial.print(gps.date.month());
-//        Serial.print(F(" Day="));
-//        Serial.println(gps.date.day());
-//      }
-//      else if (gps.time.isUpdated())
-//      {
-//        Serial.print(F("TIME       Fix Age="));
-//        Serial.print(gps.time.age());
-//        Serial.print(F("ms Raw="));
-//        Serial.print(gps.time.value());
-//        Serial.print(F(" Hour="));
-//        Serial.print(gps.time.hour());
-//        Serial.print(F(" Minute="));
-//        Serial.print(gps.time.minute());
-//        Serial.print(F(" Second="));
-//        Serial.print(gps.time.second());
-//        Serial.print(F(" Hundredths="));
-//        Serial.println(gps.time.centisecond());
-//      }           
+      }
+      else
+      {
+        return false;                           
+      }
     }
+    else
+    {
+      return false;                           
+    }   
   }
-  else
-  {
-    return false;
-  }
-  return false;
+  
 }

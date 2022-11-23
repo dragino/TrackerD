@@ -1,8 +1,8 @@
 #ifndef _config_h_
 #define _config_h_
 
-#define Pro_model           "Skylab "
-#define Pro_version         "v1.0.0 "
+#define Pro_model           "TrackerD "
+#define Pro_version         "v1.4.3"
 //#define EEPROM_SIZE         128
 //#define EEPROM_KEY_SIZE     32
 

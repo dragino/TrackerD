@@ -34,9 +34,14 @@ ATEerror_t at_fdr_run(const char *param)
 {
   
   sys.DATA_CLEAR(); 
+  sys.pdop_value = 7.00;
+  sys.Positioning_time = 180000;
+  sys.TF[0] ={0x14};
+  sys.config_Write();  
 //  sys.GPSDATA_CLEAR();
 //  EEPROM.commit(); 
   ESP.restart();
+
   return AT_OK;
 }
 
@@ -497,6 +502,14 @@ ATEerror_t at_pnackmd_set(const char *param)
   {
     return AT_PARAM_ERROR;
   }
+  if(pnackmd == 1)
+  {
+    sys.frame_flag =1;
+  } 
+  else if(pnackmd == 0)
+  {
+   sys.frame_flag = 0;  
+  }
   sys.PNACKmd = pnackmd;
   return AT_OK;
 }
@@ -684,26 +697,17 @@ ATEerror_t at_blemask_get(const char *param)
 ATEerror_t at_blemask_set(const char *param)
 {
   int i = strlen(param);
-  uint32_t s_config[32];
+  uint32_t s_config[32] = {0};
+  uint8_t config_count =0;
+  char blemask_data[12];
+  memset(blemask_data,0,sizeof(blemask_data));
+  memset(sys.blemask_data,0,sizeof(sys.blemask_data));
   if(i <= 10)
   {
     for(int a=0,b=0;a<strlen(param);a++)
     {
       sys.blemask_data[b++] = *(param+a);
     }
-    for(int i=0,j = 0;i<strlen(sys.blemask_data);i=i+4,j++)
-    {
-      s_config[0]=(sys.blemask_data[i+0]<<24)|(sys.blemask_data[i+1]<<16)|(sys.blemask_data[i+2]<<8)|(sys.blemask_data[i+3]);
-    }
-    Serial.printf("%s",s_config[0]);
-    for(int i=0,j = 0;i<3;i=i+4,j=j+4)
-    {
-      sys.blemask_data[j]= s_config[0+i]>>24;
-      sys.blemask_data[j+1]= s_config[0+i]>>16;
-      sys.blemask_data[j+2]= s_config[0+i]>>8;
-      sys.blemask_data[j+3]= s_config[0+i];
-    } 
-    Serial.printf("%s",sys.blemask_data);  
   }
   else
   {
@@ -760,6 +764,27 @@ ATEerror_t at_showid_set(const char *param)
     return AT_PARAM_ERROR;
   }
   sys.showid = SHOWid;
+  return AT_OK;
+}
+
+/**************       AT_PT       **************/
+ATEerror_t at_pt_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT PT"=");
+  Serial.printf("%02x\r\n",sys.TF[0]);
+  return AT_OK;
+}
+
+ATEerror_t at_pt_set(const char *param)
+{
+  char tf[2] ={0};
+  memcpy(tf,param,2);
+  uint8_t aa[1];
+  StrToHex(sys.TF,tf,2);
+//  uint32_t devaddr = aa[0]<<24|aa[1]<<16|aa[2]<<8|aa[3];
+//  sys.LORA_SetDevaddr(devaddr);
+  Serial.printf("%02x\r\n",sys.TF[0]);
   return AT_OK;
 }
 /**************       ATInsPro       **************/
