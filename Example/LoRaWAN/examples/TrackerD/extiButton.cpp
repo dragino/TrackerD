@@ -48,6 +48,7 @@ void attachDuringLongPress()
     {
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 0;
+      sys.alarm = 1;
       if(sys.lon == 1)
       {
         digitalWrite(LED_PIN_RED, HIGH);
@@ -78,6 +79,7 @@ void attachDuringLongPress()
      if(operate_flag == 1)
      {
         sys.exit_off =0;
+        sys.alarm = 1;
         alarm(); 
         operate_flag = 0;
         sys.sleep_flag = 2;  
@@ -96,6 +98,8 @@ void attachLongPressStop()
     {
       digitalWrite(LED_PIN_RED, LOW);
       digitalWrite(LED_PIN_GREEN, LOW);
+      sys.alarm_count = 0;
+      sys.alarm = 1;
       alarm();  
     }
     else if (sys.sleep_flag == 1)
@@ -103,6 +107,7 @@ void attachLongPressStop()
      digitalWrite(LED_PIN_RED, LOW);
      digitalWrite(LED_PIN_BLUE, LOW);
      operate_flag = 1;
+     sys.alarm = 1;
      sys.sleep_flag = 1;
     }
 }

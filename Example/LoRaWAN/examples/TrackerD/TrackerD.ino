@@ -19,6 +19,7 @@ int turn_interrupts = 0;
 int interrupts_count = 0;
 int interrupts_flag = 0;
 int EXIT_flag = 0;
+int intwk_flag =0;
 unsigned long buzzerlast = 0UL;
 unsigned long Exit_Alarm = 0UL;
 
@@ -35,7 +36,6 @@ RTC_DATA_ATTR int button_Count1 = 0;
 RTC_DATA_ATTR int sport_Count = 0;
 RTC_DATA_ATTR int sport_mod = 0;
 RTC_DATA_ATTR int ack_datalog =0;
-
 
 void os_getArtEui (u1_t* buf) { sys.LORA_GetAEUI(buf);}
 
@@ -488,7 +488,7 @@ void do_send(osjob_t* j)
             sys.port = 2;
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)) & 0xFF;   
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4)) & 0xFF;   
             GXHT3x_GetData();
             sensor.hum = (int)(GXHT3x_GetHum()*10);
             sensor.tem = (int)(GXHT3x_GetTem()*10); 
@@ -502,7 +502,7 @@ void do_send(osjob_t* j)
             sys.port = 3;
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)) & 0xFF;           
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4)) & 0xFF;         
           }               
         }
         if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
@@ -537,7 +537,7 @@ void do_send(osjob_t* j)
             mydata[i++] = num;     
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.ble_mod<<6) | (sys.lon<<5) ) & 0xFF;                   
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4)) & 0xFF;                       
           }
           else if(sys.ble_mod  == 2)
           {
@@ -562,7 +562,7 @@ void do_send(osjob_t* j)
             mydata[i++] = wifirssi & 0xFF; 
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF; 
-            mydata[i++] = ((sys.ble_mod<<6) | (sys.lon<<5) ) & 0xFF;                                            
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4)) & 0xFF;                                                 
           }
         }
       }        
@@ -687,6 +687,7 @@ static void print_wakeup_reason()
       button_Count1 =1;
       Serial.printf("button_Count:%d\r\n",button_Count);
       sys.keep_flag =1;
+      intwk_flag =1;
       myIMU.imu_power_down(); 
       sys.tdc = sys.sys_time;
       if(button_Count == 1)
@@ -698,12 +699,11 @@ static void print_wakeup_reason()
     break;
     case ESP_SLEEP_WAKEUP_EXT1 : 
       sys.gps_start = 0;
-      sys.alarm_count = 0;
-      sys.alarm = 1;
+//      sys.alarm_count = 0;
       sys.exti_flag = 0;
       EXIT_flag = 1;
 //      turn_interrupts = 0;
-      sport_mod =0;
+      sport_mod =0;     
       Serial.println("Wakeup caused by external signal using RTC_CNTL"); 
     break;
     case ESP_SLEEP_WAKEUP_TIMER :     
@@ -746,6 +746,21 @@ static void print_wakeup_reason()
       else
       {
         sys.keep_flag = 1;
+      }
+      if(sys.FDR_flag == 0)
+      {
+        sys.DATA_CLEAR(); 
+//        sys.tdc = 1200000;     //uint:ms
+//        sys.mtdc = 300000;     //uint:ms
+//        sys.atdc = 60000;     //uint:ms
+//        sys.sys_time = 1200000; //uint:ms
+//        sys.lon = 1;   
+        sys.FDR_flag = 1;      
+        sys.pdop_value = 7.00;
+        sys.Positioning_time = 180000;
+        sys.TF[0] ={0x14};
+        sys.config_Write(); 
+         Serial.printf("FDR\r\n");      
       }
       sys.tdc = sys.sys_time;
       gpio_deep_sleep_hold_dis();
@@ -1172,8 +1187,10 @@ void alarm_state(void)
       }
       else if(sys.buzzer_flag == 0)
       {
+        sys.alarm_count++;  
         Serial.printf("send NO.%d Alarm data \n\r",sys.alarm_count);    
         sys.gps_alarm =0 ;
+        sys.alarm = 1;
         sys.buzzer_flag = 2;
         sys.exti_flag = 3;
         if(sys.lon == 1)
@@ -1219,11 +1236,16 @@ void alarm_state(void)
   }
   else if (sys.exti_flag == 2)
   { 
-    sys.gps_alarm = 0;
-    sys.gps_start = 2;
-    sys.alarm = 0;
-    sys.alarm_count =0;
-    sys.exti_flag = 3;
+    
+    if(sys.alarm == 1)
+    {
+      sys.exti_flag = 1;
+    }
+    else 
+    {
+      sys.exti_flag = 3;
+      sys.gps_start = 2;
+    }
     sys.config_Write();       
     Serial.println("sleep mode");
     GXHT3x_LowPower();
@@ -1243,8 +1265,7 @@ void alarm_state(void)
     if(sys.gps_start == 0)
     {   
       if(sys.alarm_count<=60)
-      {  
-        sys.alarm_count++;          
+      {          
         sys.gps_start = 0;
         os_JOINED_flag = 0;
         if(sys.alarm_count == 60)

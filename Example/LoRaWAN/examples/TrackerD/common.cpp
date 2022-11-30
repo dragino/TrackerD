@@ -15,6 +15,8 @@ uint8_t config_count =0;
 uint32_t s_config1[32] = {0};
 uint8_t config_count1 =0;
 
+uint8_t addr_ble =0;
+
 //// Instantiate eeprom objects with parameter/argument names and sizes
 EEPROMClass  KEY("eeprom0");
 EEPROMClass  DATA("eeprom1");
@@ -315,7 +317,7 @@ void SYS::eeprom_init(void)
 void SYS::config_Write(void)
 {
   int       addr = 0;
-  int       addr1 = 0;
+  int       addr1 = 0;   
   uint8_t   buff[16]={0};
   uint32_t  data_32;
   uint8_t   data_8;
@@ -492,21 +494,45 @@ void SYS::config_Write(void)
   addr1 += sizeof(unsigned char);   
 
   DATA.writeUChar(addr1, sys.TF[0]);               
-  addr1 += sizeof(unsigned char);     
-    
-  for(int i=0,j = 0;i<strlen(sys.blemask_data);i=i+4,j++)
+  addr1 += sizeof(unsigned char);  
+
+  DATA.writeUChar(addr1,FDR_flag);               
+  addr1 += sizeof(unsigned char); 
+     
+  if(sys.blemask_flag == 1)
   {
-    s_config[config_count++]=(sys.blemask_data[i+0]<<24)|(sys.blemask_data[i+1]<<16)|(sys.blemask_data[i+2]<<8)|(sys.blemask_data[i+3]);
-    DATA.writeUChar(addr1, s_config[config_count++]);               
-    addr1 += sizeof(unsigned char);
+    addr1 =64;
+    for(int i=0;i<3;i++)
+    {
+      DATA.writeUInt(addr1, 0);          
+      addr1 += sizeof(unsigned int);
+    }     
+    addr1 =64;
+    for(int i=0,j = 0;i<strlen(sys.blemask_data);i=i+4,j++)
+    {
+      DATA.writeUInt(addr1, s_config[config_count++]=(sys.blemask_data[i+0]<<24)|(sys.blemask_data[i+1]<<16)|(sys.blemask_data[i+2]<<8)|(sys.blemask_data[i+3]));          
+      addr1 += sizeof(unsigned int);
+    }  
+    addr_ble =  addr1; 
+    sys.blemask_flag = 0;  
+  }  
+  if(sys.blemask_flag == 2)
+  {
+    addr1 = 77 ;
+    for(int i=0;i<3;i++)
+    {
+      DATA.writeUInt(addr1, s_config1[0]=0);          
+      addr1 += sizeof(unsigned int);
+    }  
+    addr1 = 77 ;    
+    for(int i=0,j = 0;i<strlen(sys.wifimask_data);i=i+4,j++)
+    {   
+      DATA.writeUInt(addr1, s_config1[config_count1++]=(sys.wifimask_data[i+0]<<24)|(sys.wifimask_data[i+1]<<16)|(sys.wifimask_data[i+2]<<8)|(sys.wifimask_data[i+3]));               
+      addr1 += sizeof(unsigned int); 
+    }      
+    sys.blemask_flag = 0;
   }
-  
-  for(int i=0,j = 0;i<strlen(sys.wifimask_data);i=i+4,j++)
-  {
-    s_config1[config_count1++]=(sys.wifimask_data[i+0]<<24)|(sys.wifimask_data[i+1]<<16)|(sys.wifimask_data[i+2]<<8)|(sys.wifimask_data[i+3]);
-    DATA.writeUChar(addr1, s_config1[config_count1++]);               
-    addr1 += sizeof(unsigned char);
-  }     
+   
   KEY.commit();
   DATA.commit();
   addr = 0;
@@ -687,20 +713,23 @@ void SYS::config_Read(void)
   sys.TF[0] = DATA.readUChar(addr1);
   addr1 += sizeof(unsigned char); 
 
+  FDR_flag = DATA.readUChar(addr1);
+  addr1 += sizeof(unsigned char); 
+
   for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
-    s_config[i] = DATA.readUChar(addr1);
-    addr1 += sizeof(unsigned char); 
+    s_config[i] = DATA.readUInt(addr1);
+    addr1 += sizeof(unsigned int); 
     blemask_data[j]= s_config[0+i]>>24;
     blemask_data[j+1]= s_config[0+i]>>16;
     blemask_data[j+2]= s_config[0+i]>>8;
     blemask_data[j+3]= s_config[0+i];
   } 
-
+  addr1 = 77;
   for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
-    s_config1[i] = DATA.readUChar(addr1);
-    addr1 += sizeof(unsigned char); 
+    s_config1[i] = DATA.readUInt(addr1);
+    addr1 += sizeof(unsigned int); 
     wifimask_data[j]= s_config1[0+i]>>24;
     wifimask_data[j+1]= s_config1[0+i]>>16;
     wifimask_data[j+2]= s_config1[0+i]>>8;
@@ -933,21 +962,21 @@ void customize_freq_set(void)
 
 void StrToHex(uint8_t *pbDest, char *pszSrc, int nLen)
 {
-	uint8_t h1, h2;
-	uint8_t s1, s2;
-	for (int i = 0; i < nLen; i++)
-	{
-		h1 = pszSrc[2 * i];
-		h2 = pszSrc[2 * i + 1];
+  uint8_t h1, h2;
+  uint8_t s1, s2;
+  for (int i = 0; i < nLen; i++)
+  {
+    h1 = pszSrc[2 * i];
+    h2 = pszSrc[2 * i + 1];
  
-		s1 = toupper(h1) - 0x30;
-		if (s1 > 9)
-			s1 -= 7;
+    s1 = toupper(h1) - 0x30;
+    if (s1 > 9)
+      s1 -= 7;
  
-		s2 = toupper(h2) - 0x30;
-		if (s2 > 9)
-			s2 -= 7;
+    s2 = toupper(h2) - 0x30;
+    if (s2 > 9)
+      s2 -= 7;
  
-		pbDest[i] = s1 * 16 + s2;
-	}
+    pbDest[i] = s1 * 16 + s2;
+  }
 }

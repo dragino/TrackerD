@@ -33,13 +33,14 @@ ATEerror_t at_reset_run(const char *param)
 ATEerror_t at_fdr_run(const char *param)
 {
   
-  sys.DATA_CLEAR(); 
-  sys.pdop_value = 7.00;
-  sys.Positioning_time = 180000;
-  sys.TF[0] ={0x14};
-  sys.config_Write();  
+  sys.DATA_CLEAR();
+//  EEPROM.commit();    
+//  sys.pdop_value = 7.00;
+//  sys.Positioning_time = 180000;
+//  sys.TF[0] ={0x14};
+//  sys.config_Write();  
 //  sys.GPSDATA_CLEAR();
-//  EEPROM.commit(); 
+
   ESP.restart();
 
   return AT_OK;
@@ -699,15 +700,17 @@ ATEerror_t at_blemask_set(const char *param)
   int i = strlen(param);
   uint32_t s_config[32] = {0};
   uint8_t config_count =0;
-  char blemask_data[12];
-  memset(blemask_data,0,sizeof(blemask_data));
+  char blemask[12];
+  sys.blemask_flag =1;
+//  memset(blemask,0,sizeof(blemask));
   memset(sys.blemask_data,0,sizeof(sys.blemask_data));
   if(i <= 10)
   {
-    for(int a=0,b=0;a<strlen(param);a++)
+   for(int a=0,b=0;a<strlen(param);a++)
     {
       sys.blemask_data[b++] = *(param+a);
-    }
+    }   
+    Serial.printf("blemask_data:%s\r\n",sys.blemask_data);     
   }
   else
   {
@@ -734,6 +737,8 @@ ATEerror_t at_wifimask_get(const char *param)
 ATEerror_t at_wifimask_set(const char *param)
 {
   int i = strlen(param);
+  sys.blemask_flag =2;
+  memset(sys.wifimask_data,0,sizeof(sys.wifimask_data));
   if(i <= 10)
   {
     for(int a=0,b=0;a<strlen(param);a++)

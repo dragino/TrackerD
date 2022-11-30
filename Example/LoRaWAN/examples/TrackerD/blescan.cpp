@@ -225,10 +225,8 @@ void ble_run()
 //Bluetooth scan data processing
 void ble_data(void)
 {
-  if(sys.Intwk == 1)
-  {
-    sys.exti_flag = 4;
-  }
+
+  sys.exti_flag = 1;
   if(sys.exti_flag != 3 && sc_count != 0)
   {
 //    Serial.printf("DATA Length= %d\r\n",strlen(sys.BLEDATA));
