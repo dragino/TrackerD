@@ -2279,7 +2279,7 @@ static bit_t processDnData_norx(void) {
         if (LMIC.upRepeatCount < LMIC.upRepeat) {
             LMICOS_logEventUint32("processDnData: repeat", (LMIC.upRepeat<<8u) | (LMIC.upRepeatCount<<0u));
             LMIC.upRepeatCount += 1;
-            txDelay(os_getTime() + ms2osticks(LMICbandplan_TX_RECOVERY_ms), 0);
+            //txDelay(os_getTime() + ms2osticks(LMICbandplan_TX_RECOVERY_ms), 0);
             LMIC.opmode &= ~OP_TXRXPEND;
             engineUpdate();
             return 1;

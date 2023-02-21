@@ -35,6 +35,7 @@
 # include "lmic_config_preconditions.h"
 #endif
 
+#define AS923_1 1
 //#define AS923_2 1
 //#define AS923_3 1
 //#define AS923_4 1
@@ -79,7 +80,7 @@ enum {
         AS923_FDOWN = 917300000,      //      (RX2 freq, DR2)
         AS923_FBCN  = 917500000,      //      default BCN, DR3
         AS923_FPING = 917500000,      //      default ping, DR3	
-#else
+#elif defined(AS923_1)
         AS923_F1    = 923200000,      // g1   SF7-12
         AS923_F2    = 923400000,      // g1   SF7-12
         AS923_FDOWN = 923200000,      //      (RX2 freq, DR2)
