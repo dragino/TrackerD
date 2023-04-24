@@ -51,7 +51,7 @@ int BatGet(void)
   {
     bat_f = batv_f*570/470;
   }
-    Serial.printf("BAT:%.2f V\r\n",bat_f);  
+//    Serial.printf("BAT:%.2f V\r\n",bat_f);  
   bat_i = (int)(bat_f*1000);
   return bat_i;
 }
@@ -90,43 +90,37 @@ void Stop_buzzer(void)
 
 void gpio_reset(void)
 {
-  gpio_sleep_set_direction(GPIO_NUM_0, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_2, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_12, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_13, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_14, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_15, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_25, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_26, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_27, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_32, GPIO_MODE_OUTPUT);
-  gpio_set_direction(GPIO_NUM_33, GPIO_MODE_OUTPUT);
+//  gpio_reset_pin((gpio_num_t)0);
+  gpio_reset_pin((gpio_num_t)2);
+//  gpio_reset_pin((gpio_num_t)4);
+  gpio_reset_pin((gpio_num_t)12);
+  gpio_reset_pin((gpio_num_t)13);
+  gpio_reset_pin((gpio_num_t)14);
+  gpio_reset_pin((gpio_num_t)15);
+  gpio_reset_pin((gpio_num_t)25);
+  gpio_reset_pin((gpio_num_t)26);
+  gpio_reset_pin((gpio_num_t)27);
+  gpio_reset_pin((gpio_num_t)32);
+  gpio_reset_pin((gpio_num_t)33);
+  gpio_reset_pin((gpio_num_t)5);
+  gpio_reset_pin((gpio_num_t)18);
+  gpio_reset_pin((gpio_num_t)19);
   
-//  gpio_set_direction(GPIO_NUM_34, GPIO_MODE_OUTPUT);
-//  gpio_set_direction(GPIO_NUM_35, GPIO_MODE_OUTPUT);
-//  gpio_set_direction(GPIO_NUM_36, GPIO_MODE_OUTPUT);
-//  gpio_set_direction(GPIO_NUM_37, GPIO_MODE_OUTPUT);
-//  gpio_set_direction(GPIO_NUM_38, GPIO_MODE_OUTPUT);
-//  gpio_set_direction(GPIO_NUM_39, GPIO_MODE_OUTPUT);
-  digitalWrite(0, LOW);
-  digitalWrite(2, LOW);
-  digitalWrite(4, LOW);
-  digitalWrite(12, LOW);
-  digitalWrite(13, LOW);
-  digitalWrite(14, LOW);
-  digitalWrite(15, LOW);
-  digitalWrite(25, LOW);
-  digitalWrite(26, LOW);
-  digitalWrite(27, LOW);
-  digitalWrite(32, LOW);
-  digitalWrite(33, LOW);
-//  digitalWrite(34, LOW);
-//  digitalWrite(35, LOW);
-//  digitalWrite(36, LOW);
-//  digitalWrite(37, LOW);
-//  digitalWrite(38, LOW);
-//  digitalWrite(39, LOW);  
+//  gpio_pullup_dis((gpio_num_t)0);
+  gpio_pullup_dis((gpio_num_t)2);
+//  gpio_pullup_dis((gpio_num_t)4);
+  gpio_pullup_dis((gpio_num_t)12);
+  gpio_pullup_dis((gpio_num_t)13);
+  gpio_pullup_dis((gpio_num_t)14);
+  gpio_pullup_dis((gpio_num_t)15);
+  gpio_pullup_dis((gpio_num_t)25);
+  gpio_pullup_dis((gpio_num_t)26);
+  gpio_pullup_dis((gpio_num_t)27);
+  gpio_pullup_dis((gpio_num_t)32);
+  gpio_pullup_dis((gpio_num_t)33);
+  gpio_pullup_dis((gpio_num_t)5);
+  gpio_pullup_dis((gpio_num_t)18);
+  gpio_pullup_dis((gpio_num_t)19);
 }
 
 void Device_status()
@@ -140,7 +134,7 @@ void Device_status()
   
   sys.fire_version = string_touint();
 //  Serial.printf("sys.fire_version:%d\r\n",sys.fire_version);
-  if(sys.fire_version>100)
+  if(sys.fire_version>=100)
   {
     version=(sys.fire_version/100)<<8|(sys.fire_version/10%10)<<4|(sys.fire_version%10);
   }
@@ -158,9 +152,9 @@ void Device_status()
     freq_band=0x03;
   #elif defined( CFG_au915 )
     freq_band=0x04;
-  #elif defined( CFG_KZ865 )
+  #elif defined( CFG_kz865 )
     freq_band=0x05;
-  #elif defined( CFG_RU864 )
+  #elif defined( CFG_ru864 )
     freq_band=0x06;
   #elif defined( CFG_as923 )
     #if defined AS923_1
@@ -178,7 +172,7 @@ void Device_status()
     freq_band=0x0C;
   #elif defined( CFG_kr920 ) 
     freq_band=0x0D;
-  #elif defined( CFG_MA869 ) 
+  #elif defined( CFG_ma869 ) 
     freq_band=0x0E;
   #else
     freq_band=0x00;
@@ -218,6 +212,8 @@ void SYS::Band_information(void)
     Serial.println("AS923_2");
     #elif defined AS923_3
     Serial.println("AS923_3");
+    #elif defined AS923_4
+    Serial.println("AS923_4");    
     #else
     Serial.println("AS923");
     #endif
@@ -356,6 +352,9 @@ void SYS::config_Write(void)
     KEY.writeUChar(addr, buff[i]);               
     addr += sizeof(unsigned char);
   }
+  addr =68;
+  KEY.writeUChar(addr,fire_version_write);               
+  addr += sizeof(unsigned char);    
 //devaddr
   data_32 = LORA_GetDevaddr();
   KEY.writeUInt(addr, data_32);           
@@ -498,16 +497,28 @@ void SYS::config_Write(void)
 
   DATA.writeUChar(addr1,FDR_flag);               
   addr1 += sizeof(unsigned char); 
-     
+  
+  data_8 = atst;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char); 
+
+  data_8 = pedometer;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);
+
+  data_8 = fall_detection;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);  
+  
   if(sys.blemask_flag == 1)
   {
-    addr1 =64;
+    addr1 =67;
     for(int i=0;i<3;i++)
     {
       DATA.writeUInt(addr1, 0);          
       addr1 += sizeof(unsigned int);
     }     
-    addr1 =64;
+    addr1 =67;
     for(int i=0,j = 0;i<strlen(sys.blemask_data);i=i+4,j++)
     {
       DATA.writeUInt(addr1, s_config[config_count++]=(sys.blemask_data[i+0]<<24)|(sys.blemask_data[i+1]<<16)|(sys.blemask_data[i+2]<<8)|(sys.blemask_data[i+3]));          
@@ -518,13 +529,13 @@ void SYS::config_Write(void)
   }  
   if(sys.blemask_flag == 2)
   {
-    addr1 = 77 ;
+    addr1 = 80 ;
     for(int i=0;i<3;i++)
     {
       DATA.writeUInt(addr1, s_config1[0]=0);          
       addr1 += sizeof(unsigned int);
     }  
-    addr1 = 77 ;    
+    addr1 = 80 ;    
     for(int i=0,j = 0;i<strlen(sys.wifimask_data);i=i+4,j++)
     {   
       DATA.writeUInt(addr1, s_config1[config_count1++]=(sys.wifimask_data[i+0]<<24)|(sys.wifimask_data[i+1]<<16)|(sys.wifimask_data[i+2]<<8)|(sys.wifimask_data[i+3]));               
@@ -585,6 +596,11 @@ void SYS::config_Read(void)
   data_32 = KEY.readUInt(addr);
   LORA_SetDevaddr(data_32);
   addr += sizeof(unsigned int);
+  
+  addr =68;
+  fire_version_write = KEY.readUChar(addr);
+  addr += sizeof(unsigned char);
+   
 //tdc
   tdc = DATA.readUInt(addr1);
   addr1 += sizeof(unsigned int);
@@ -618,8 +634,7 @@ void SYS::config_Read(void)
 //lon
   lon = DATA.readUChar(addr1);                   
   addr1 += sizeof(unsigned char);  
-  if(lon == 0)
-    lon = 1;
+
   alarm = DATA.readUChar(addr1);                   
   addr1 += sizeof(unsigned char);  
 //  if(alarm == 0)
@@ -716,6 +731,18 @@ void SYS::config_Read(void)
   FDR_flag = DATA.readUChar(addr1);
   addr1 += sizeof(unsigned char); 
 
+  data_8 = DATA.readByte(addr1);      
+  atst = data_8;         
+  addr1 += sizeof(byte); 
+
+  data_8 = DATA.readByte(addr1);      
+  pedometer = data_8;         
+  addr1 += sizeof(byte); 
+
+  data_8 = DATA.readByte(addr1);      
+  fall_detection = data_8;         
+  addr1 += sizeof(byte); 
+    
   for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
     s_config[i] = DATA.readUInt(addr1);
@@ -725,7 +752,7 @@ void SYS::config_Read(void)
     blemask_data[j+2]= s_config[0+i]>>8;
     blemask_data[j+3]= s_config[0+i];
   } 
-  addr1 = 77;
+  addr1 = 80;
   for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
     s_config1[i] = DATA.readUInt(addr1);
@@ -734,8 +761,7 @@ void SYS::config_Read(void)
     wifimask_data[j+1]= s_config1[0+i]>>16;
     wifimask_data[j+2]= s_config1[0+i]>>8;
     wifimask_data[j+3]= s_config1[0+i];
-  } 
-            
+  }           
 }
 
 void SYS::gps_data_Weite(void)

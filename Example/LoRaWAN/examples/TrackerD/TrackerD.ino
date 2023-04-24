@@ -1,7 +1,8 @@
 #include <SPI.h>
 #include "common.h"
 #include "lis3dh-motion-detection.h"
-
+#include "driver/rtc_io.h" 
+#include "hal/rtc_io_hal.h"
 #define HIGH_RESOLUTION
 #define maxRxSize       128 
 #define EXTI_PIN        0
@@ -31,12 +32,18 @@ volatile SemaphoreHandle_t timerSemaphore;
 volatile SemaphoreHandle_t timerSemaphore1;
 // Saves the LMIC structure during DeepSleep
 RTC_DATA_ATTR lmic_t RTC_LMIC;
-RTC_DATA_ATTR int button_Count = 0;
+RTC_DATA_ATTR uint32_t button_Count = 0;
 RTC_DATA_ATTR int button_Count1 = 0;
 RTC_DATA_ATTR int sport_Count = 0;
 RTC_DATA_ATTR int sport_mod = 0;
 RTC_DATA_ATTR int ack_datalog =0;
-
+RTC_DATA_ATTR int TDC_Count =0;
+RTC_DATA_ATTR int TDC_Time =0;
+RTC_DATA_ATTR int Pedometer_Count =0;
+RTC_DATA_ATTR int DFR =0;
+RTC_DATA_ATTR int Pedometer_OFF =0;
+RTC_DATA_ATTR int TDC_flag =0;
+RTC_DATA_ATTR int Erase =0;
 void os_getArtEui (u1_t* buf) { sys.LORA_GetAEUI(buf);}
 
 void os_getDevEui (u1_t* buf) { sys.LORA_GetDEUI(buf);}
@@ -45,6 +52,7 @@ void os_getDevKey (u1_t* buf) { sys.LORA_GetAKEY(buf);}
 
 static void LORA_RxData( uint8_t *AppData,uint8_t AppData_Len);
 void gps_send(void);
+void tdc_time(void);
 void device_start(void);
 void Alarm_start(void);
 void sys_sleep(void);
@@ -180,6 +188,7 @@ void onEvent (ev_t ev)
           Serial.println(F("EV_JOINED"));
           os_JOINED_flag = 1;
           fcnt_flag = 1;
+          DFR =1;
           digitalWrite(LED_PIN_GREEN, HIGH);                   
           LMIC_getSessionKeys(&sys.netid, &sys.devaddr, sys.nwkSKey, sys.appSKey);
           // Disable link check validation (automatically enabled
@@ -537,7 +546,11 @@ void do_send(osjob_t* j)
             mydata[i++] = num;     
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4)) & 0xFF;                       
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4)) & 0xFF;  
+            mydata[i++] = (button_Count>>24)  & 0xFF;
+            mydata[i++] = (button_Count>>16)  & 0xFF;
+            mydata[i++] = (button_Count>>8)   & 0xFF;
+            mydata[i++] = (button_Count)      & 0xFF;                                 
           }
           else if(sys.ble_mod  == 2)
           {
@@ -586,6 +599,11 @@ void device_send(osjob_t* j)
       Device_status();
       sys.port = 0x05;
       mydata[i++] = devicet.sensor_type;
+//      if(sys.pedometer == 1)
+//      { 
+        mydata[i++] = (devicet.firm_ver>>24)&0xff;
+        mydata[i++] = (devicet.firm_ver>>16)&0xff;
+//      }
       mydata[i++] = (devicet.firm_ver>>8)&0xff;
       mydata[i++] = devicet.firm_ver&0xff;
       mydata[i++] = devicet.freq_band;
@@ -683,55 +701,109 @@ static void print_wakeup_reason()
       digitalWrite(LED_PIN_RED, HIGH);
       delay(500); 
       digitalWrite(LED_PIN_RED, LOW);
-      button_Count++;
-      button_Count1 =1;
-      Serial.printf("button_Count:%d\r\n",button_Count);
-      sys.keep_flag =1;
-      intwk_flag =1;
-      myIMU.imu_power_down(); 
-      sys.tdc = sys.sys_time;
-      if(button_Count == 1)
+      if(sys.fall_detection == 0 )
       {
-        turn_interrupts = 1;
-        button_Count = 0;
-        interrupts_flag = 0;        
+        button_Count++;
+        Pedometer_Count++;
+        sys.tdc = sys.sys_time;
+        TDC_Time = sys.sys_time;
+        TDC_Count = 0;
+        Serial.printf("button_Count:%d\r\n",button_Count);
+        if(sys.pedometer == 0) 
+        {
+          button_Count1 =1;
+  //        sys.keep_flag =1;
+          intwk_flag =1;
+          sys.gps_start = 2;        
+          myIMU.imu_power_down();       
+          if(button_Count1 == 1)
+          {
+            turn_interrupts = 1;
+            interrupts_flag = 0;        
+          }        
+        }
+        else
+        {
+          sys.gps_start = 0;  
+          button_Count1 =0;
+          sys.exti_flag = 2;  
+        }
+      }
+      else
+      {
+        sys.gps_start == 0;
+        interrupts_flag = 1;
+        sys.gps_alarm = 1;
+        sys.alarm = 1;
+        sys.exti_flag = 1;
+        sys.buzzer_flag = 1;
+        sys.alarm_no = 1;        
       }
     break;
     case ESP_SLEEP_WAKEUP_EXT1 : 
+      gpio_deep_sleep_hold_dis();
       sys.gps_start = 0;
-//      sys.alarm_count = 0;
       sys.exti_flag = 0;
       EXIT_flag = 1;
-//      turn_interrupts = 0;
-      sport_mod =0;     
+      sport_mod =0;
+      DFR =0;     
+      if(sys.pedometer == 1)
+        {
+          myIMU.imu_power_down();
+          Pedometer_OFF =1;
+        }       
+
       Serial.println("Wakeup caused by external signal using RTC_CNTL"); 
     break;
     case ESP_SLEEP_WAKEUP_TIMER :     
-    if(sys.Intwk == 1 && button_Count1 != 0 )
+    if(sys.Intwk == 1 && button_Count1 != 0 && sys.pedometer == 0 && TDC_flag == 1)
     {
-//     Serial.println("Intwk");
-     interrupts_flag = 1;    
+      interrupts_flag = 1; 
     }
     if(sys.Intwk == 0) 
     {
-        sport_mod =0;
-        sys.alarm = 0;
-        button_Count1 = 1;
-        turn_interrupts = 0;      
+      sport_mod =0;
+      sys.alarm = 0;
+      button_Count1 = 0;
+      turn_interrupts = 0;      
+    } 
+    if(sys.pedometer == 1)
+    { 
+      sys.tdc = sys.sys_time;
+      if(sys.tdc <= 4200000)
+      {
+        Pedometer_Count = 0;
+      }
+      else if(EXIT_flag != 1 && button_Count1 == 0 &&  sys.tdc >= 4200000)
+      {
+        if(TDC_Count !=0 )
+        {
+         Pedometer_Count = 0;
+        }
+        if(TDC_Time <= 3600000 )
+        {
+         Pedometer_Count = 0;
+         Serial.println("TDC_Time <= 3600000"); 
+        }  
+      }
     }
     Serial.println("Wakeup caused by timer");
     break;
     case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
     case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
     default :
+      Serial.printf("Wakeup was not caused by deep sleep: %d\r\n",wakeup_reason); 
+      sys.config_Read();
       sys.gps_alarm = 0;
       sys.gps_start = 1;
       sys.exit_off = 1;
       sys.alarm = 0;
       sys.alarm_count =0;
-      sys.showid = 0;
       os_JOINED_flag = 1;
+      TDC_Time = sys.sys_time;
+      TDC_Count = 0;
       Serial.println(Pro_model "," Pro_version);
+      Device_status();
       sys.Band_information();
       sys.loggpsdata_send = 0;
       if(sys.sensor_mode ==0 )
@@ -747,28 +819,40 @@ static void print_wakeup_reason()
       {
         sys.keep_flag = 1;
       }
+      if(sys.fire_version_write == 0)
+      {
+        sys.fire_version_write = sys.fire_version ;
+        sys.FDR_flag = 1;
+        sys.config_Write();  
+      }  
+      if(sys.fire_version_write != sys.fire_version )
+      {
+        sys.FDR_flag = 1;
+        sys.fire_version_write = sys.fire_version ;
+        sys.config_Write();    
+      }
+      else
+      {
+        sys.fire_version_write = sys.fire_version ;   
+      } 
+      if(sys.FDR_flag == 1)
+      {
+        sys.DATA_CLEAR();
+        ESP.restart();                    
+      }
       if(sys.FDR_flag == 0)
       {
-        sys.DATA_CLEAR(); 
-//        sys.tdc = 1200000;     //uint:ms
-//        sys.mtdc = 300000;     //uint:ms
-//        sys.atdc = 60000;     //uint:ms
-//        sys.sys_time = 1200000; //uint:ms
-//        sys.lon = 1;   
-        sys.FDR_flag = 1;      
+        sys.atst = 15;   
+        sys.FDR_flag = 2; 
+        sys.showid = 0; 
+        sys.lon = 1;   
         sys.pdop_value = 7.00;
         sys.Positioning_time = 180000;
-        sys.TF[0] ={0x14};
-        sys.config_Write(); 
-         Serial.printf("FDR\r\n");      
+        sys.TF[0] ={0x14};   
       }
       sys.tdc = sys.sys_time;
       gpio_deep_sleep_hold_dis();
       gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);       
-//      sys.Dwelltime = 1;
-      #if defined( CFG_as923 ) || defined( CFG_au915 ) 
-//      LMIC_setdwellTime(sys.Dwelltime);
-      #endif 
       sys.config_Write();  
       digitalWrite(LED_PIN_BLUE, HIGH);
       delay(500); 
@@ -779,7 +863,6 @@ static void print_wakeup_reason()
       digitalWrite(LED_PIN_GREEN, HIGH);
       delay(500); 
       digitalWrite(LED_PIN_GREEN, LOW);          
-      Serial.printf("Wakeup was not caused by deep sleep: %d\r\n",wakeup_reason); 
     break;
   }
 }
@@ -834,22 +917,44 @@ void setup() {
     {
       Serial.println(sys.atdc); 
     }
-  }  
-//  Serial.printf("sys.alarm:%d\r\n",sys.alarm); 
-//  Serial.printf("gps_start:%d\r\n",sys.gps_start); 
-//  Serial.printf("gps_count:%d\r\n",sys.alarm_count); 
-  Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);   
-  Serial.printf("gps_write:%d\r\n",sys.gps_write);   
-//  Serial.printf("sys.Intwk:%d\r\n",sys.Intwk);
+  } 
   sys.sensor_mode = sys.save_sensor_mode;  
-  sensor.bat = BatGet();
+  sensor.bat = BatGet(); 
+  Serial.printf("BAT:%d mV\r\n",sensor.bat); 
+  if(EXIT_flag != 1 && button_Count1 == 0 &&  sys.tdc >= 4200000)
+  {
+    if(TDC_Count !=0 )
+    {
+      Serial.printf("TDC_Count:%d\r\n",TDC_Count); 
+      sys.gps_start = 3;
+      sys.exti_flag = 2;
+      sport_Count = 0;
+    }
+    if(TDC_Time <= 3600000 )
+    {
+      sys.gps_start = 2;
+      sys.exti_flag = 4;
+      interrupts_flag= 0;
+    }  
+  }
   if(sport_mod== 0)
   {
     if(sys.Intwk == 1)
-    {
+    {      
        LIS3DH_configIntterupts();       
     }     
-  } 
+  }
+  if(sys.fall_detection == 1 )
+  {
+    LIS3DH_configIntterupts(); 
+  }
+  if(sys.pedometer == 1&&Pedometer_OFF ==0)
+  {
+     if(sys.gps_alarm == 0)
+     {
+       LIS3DH_configIntterupts();
+     }     
+  }   
   if(sensor.bat<2840)
   {
     sys.gps_work_flag = false;
@@ -863,7 +968,7 @@ void setup() {
     {         
       GPS_Init();
       GPS_boot();
-      Serial.println("Start searching for GPS...");
+      Serial.println("Start searching for GPS...");     
       if(sys.Positioning_time != 0)
       {
 //定时器
@@ -929,8 +1034,7 @@ void loop() {
   }
 
   button_attach_loop();
-  
-  if(sys.Intwk == 1 && sport_mod == 0)
+  if(sys.Intwk == 1 && sport_mod == 0 && sys.pedometer == 0)
   {
     if(interrupts_flag == 1)
     {  
@@ -953,11 +1057,10 @@ void loop() {
         {
            sys.keep_flag = 0;
            sys.exti_flag = 2;
-           sys.tdc = sys.sys_time;  
-           uint32_t ss =sys.tdc-sys.mtdc;
+           uint32_t ss =TDC_Time-sys.mtdc;
            if(sport_Count == 0)
            {
-             if(sys.tdc <= sys.mtdc)
+             if(TDC_Time <= sys.mtdc)
              {
                 sys.keep_flag = 0;
                 sys.exti_flag = 3;  
@@ -972,7 +1075,19 @@ void loop() {
                }
                else
                {
-                 sys.tdc = sys.tdc-sys.mtdc-10000;
+                  TDC_Time = sys.sys_time;
+//                  tdc_time();
+                  if(sys.tdc >=4200000)
+                  {
+                    sys.tdc = 3600000-sys.mtdc-10000;
+                    sys.gps_start = 3;
+                    sys.exti_flag = 2;                    
+                  }
+                  else
+                  {
+                    sys.tdc = sys.tdc-sys.mtdc-10000;
+                  }
+                  TDC_Count ++;
                   LIS3DH_configIntterupts();
                }
                sport_Count = 1;
@@ -985,6 +1100,7 @@ void loop() {
       }                 
     }
   }
+  
   alarm_state();
   
   if (sys.gps_start == 1 )
@@ -1026,6 +1142,46 @@ void gps_send(void)
       os_runloop_once();  
 }
 
+void tdc_time(void)
+{
+  uint8_t TDC_Flag = sys.sys_time/3600000;
+  if(TDC_Flag>0)
+  {  
+    if(TDC_Time <= 3600000)
+    {
+      sys.exti_flag = 3;
+      TDC_Count = 0; 
+      TDC_Time = sys.sys_time;
+      if(TDC_Count == 0)
+      {
+        sys.tdc = 3600000;
+      }      
+      Serial.printf("TDC_Time:%d\r\n",TDC_Time);            
+    }
+    else
+    {
+      if(TDC_Count == 0)
+      {
+        sys.tdc = 3600000;
+      }
+      else
+      {
+        sys.tdc = 3600000-3000;
+        TDC_Time = TDC_Time -3600000; 
+        if(TDC_Time <= 3600000 )
+        {
+          sys.gps_start = 2 ;
+          TDC_Count = 0; 
+          sys.tdc =TDC_Time;
+          Serial.printf("TDC_Time:60000\r\n"); 
+        }
+      }
+      Serial.printf("TDC:%d\r\n",sys.tdc );   
+      Serial.printf("TDC_Time:%d\r\n",TDC_Time); 
+    }
+  }
+}
+
 void device_start(void)
 {
   sys.gps_work_flag = false;
@@ -1061,9 +1217,11 @@ void sys_sleep(void)
   if (!timeCriticalJobs && send_complete == true && !(LMIC.opmode & OP_TXRXPEND))
   {
     GXHT3x_LowPower();
+    
     if(sys.keep_flag == 1)
     {
 //      Serial.println("imu_power_down");
+      LIS3DH_configIntterupts();
       myIMU.imu_power_down();  
     }
     digitalWrite(BAT_PIN_LOW, LOW); 
@@ -1071,8 +1229,7 @@ void sys_sleep(void)
     if(sys.gps_start == 0)
     {   
       if(sys.alarm_count<=60)
-      {  
-        sys.alarm_count++;          
+      {     
         sys.gps_start = 0;
         os_JOINED_flag = 0;
         if(sys.alarm_count == 60)
@@ -1087,8 +1244,9 @@ void sys_sleep(void)
         else
         {
           sys.alarm = 1;
-          sys.gps_alarm = 1; 
-          myIMU.imu_power_down();  
+          sys.gps_alarm = 1;
+          LIS3DH_configIntterupts(); 
+          myIMU.imu_power_down(); 
           SaveLMICToRTC(sys.atdc);  
         }
         sys.config_Write();        
@@ -1098,14 +1256,23 @@ void sys_sleep(void)
     {
       sys.gps_start = 2; 
       sys.config_Write();
-      os_JOINED_flag = 0;
       sys.tdc = 1000;             
+    }
+    else
+    {
+      if(EXIT_flag != 1 && button_Count1 == 0 && sys.tdc >= 4200000)
+      {
+       tdc_time();
+       TDC_Count ++;   
+      }
     }
 //    os_JOINED_flag = 1;
     Serial.println("Enter sleep mode");
     if(turn_interrupts == 1)
     {
       SaveLMICToRTC(sys.mtdc); 
+      LIS3DH_configIntterupts();
+      myIMU.imu_power_down();
     }
     else 
     {
@@ -1113,7 +1280,11 @@ void sys_sleep(void)
       {
         if(sys.loggpsdata_send == 0)
         {
-         SaveLMICToRTC(sys.tdc);
+          if(os_JOINED_flag == 0)
+          {
+            sys.tdc = sys.sys_time;
+          }
+           SaveLMICToRTC(sys.tdc);
         }
         else
         {
@@ -1125,14 +1296,18 @@ void sys_sleep(void)
         SaveLMICToRTC(sys.atdc);
       }  
     }  
-    hal_sleep();    
+    GPS_shutdown();
+    LMIC_shutdown();  
     sys.LORA_EnterSleepMode();
-    Serial.flush(); 
+    rtc_gpio_isolate(GPIO_NUM_27);//mosi
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
     esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low       
-//    gpio_reset();
+    gpio_reset();
     if(turn_interrupts == 1)
     {
+      LIS3DH_configIntterupts();
+      myIMU.imu_power_down();
+      TDC_flag = 1;
       esp_sleep_enable_timer_wakeup(sys.mtdc*1000); //设置定时器唤醒 
       Serial.printf("KEEP TDC:%d\r\n",sys.mtdc);      
     } 
@@ -1142,20 +1317,29 @@ void sys_sleep(void)
       {
         if(sys.loggpsdata_send == 0)
         {
+         if(os_JOINED_flag == 0)
+         {   
+           TDC_Count ++;
+         }
+         os_JOINED_flag = 0;
+         sport_mod = 0;
+         TDC_flag = 0;
          esp_sleep_enable_timer_wakeup(sys.tdc*1000); //设置定时器唤醒 
          Serial.printf("TDC:%d\r\n",sys.tdc);
         }
         else
         {
-         esp_sleep_enable_timer_wakeup(10000*1000); //设置定时器唤醒
-         Serial.printf("keep_flag:%d\r\n",sys.keep_flag);  
+         esp_sleep_enable_timer_wakeup(10000*1000); //设置定时器唤醒 
         }
       }
       else
       {
+        LIS3DH_configIntterupts();
+        myIMU.imu_power_down();     
         esp_sleep_enable_timer_wakeup(sys.atdc*1000); //设置定时器唤醒
       }
     }
+    Serial.end(); 
     esp_deep_sleep_start(); //启动DeepSleep
   }
 }
@@ -1180,17 +1364,22 @@ void alarm_state(void)
           delay(5000);
 //          Serial.println("stop");
           Stop_buzzer();
-        }  
+          sys.keep_flag = 1;
+        } 
+        LIS3DH_configIntterupts();
         myIMU.imu_power_down();       
         sys.alarm_no = 0;
+        sport_mod =1;
+        sys.keep_flag = 1;
         Alarm_start();
       }
       else if(sys.buzzer_flag == 0)
       {
-        sys.alarm_count++;  
+        sys.alarm_count++; 
         Serial.printf("send NO.%d Alarm data \n\r",sys.alarm_count);    
         sys.gps_alarm =0 ;
         sys.alarm = 1;
+        sport_mod =1;
         sys.buzzer_flag = 2;
         sys.exti_flag = 3;
         if(sys.lon == 1)
@@ -1203,13 +1392,15 @@ void alarm_state(void)
     }
     if(sys.alarm_count == 60)
     {
+      sys.keep_flag = 0;    
       sys.gps_alarm = 0;
       sys.gps_start = 2;
+      sys.loggpsdata_send = 0;
+      interrupts_flag = 0;
       sys.alarm = 0;
       sys.alarm_count =0;
       sys.exti_flag = 3;
       sys.config_Write(); 
-      sys.keep_flag = 0;
       if(sys.Intwk == 1)
       {
          LIS3DH_configIntterupts();         
@@ -1227,7 +1418,8 @@ void alarm_state(void)
   {
     if(sys.sleep_flag == 0)
     {
-      if (millis() - sleep_last > 15000)
+      uint32_t atsend = sys.atst*1000;
+      if (millis() - sleep_last > atsend)
       {
         sys.exti_flag = 2;
         sleep_last = millis();
@@ -1236,7 +1428,6 @@ void alarm_state(void)
   }
   else if (sys.exti_flag == 2)
   { 
-    
     if(sys.alarm == 1)
     {
       sys.exti_flag = 1;
@@ -1250,15 +1441,16 @@ void alarm_state(void)
     Serial.println("sleep mode");
     GXHT3x_LowPower();
     if(sys.Intwk == 0 || button_Count1 == 1)
-    {
-//      Serial.println("imu_power_down");
-      myIMU.imu_power_down();  
+    {   
+      if(sys.pedometer == 0)
+      {
+        LIS3DH_configIntterupts();
+        myIMU.imu_power_down();  
+      }
     }
     if(sys.Intwk == 1 && EXIT_flag == 1)
     {
-      EXIT_flag = 0;
-      turn_interrupts = 1;
-//      LIS3DH_configIntterupts();    
+      turn_interrupts = 1; 
     }   
     digitalWrite(BAT_PIN_LOW, LOW); 
     sys.config_Write();              
@@ -1281,6 +1473,7 @@ void alarm_state(void)
         {
           sys.alarm = 1;
           sys.gps_alarm = 1; 
+          LIS3DH_configIntterupts();
           myIMU.imu_power_down();  
           SaveLMICToRTC(sys.atdc);  
         }
@@ -1294,9 +1487,34 @@ void alarm_state(void)
       os_JOINED_flag = 0;
       sys.tdc = 1000;             
     }
-//    os_JOINED_flag = 1;
+    else
+    {
+      if(EXIT_flag != 1 && button_Count1 == 0 && sport_Count == 0)
+      {
+       tdc_time();
+       TDC_Count ++;
+       if(sys.pedometer == 1)
+       {
+         sys.tdc = sys.mtdc-Pedometer_Count*2000;   
+//         Serial.printf("pedometer:%d\r",Pedometer_Count); 
+       }
+      }
+      if(EXIT_flag == 1 && button_Count1 == 0 )
+      {
+        if(sys.tdc>=3600000)
+        {
+          sys.tdc =3600000-sys.atst*1000;
+        }
+        else if(sys.tdc >= (sys.tdc-sys.atst*1000))
+        {
+         sys.tdc =sys.tdc-sys.atst*1000;      
+        }
+        EXIT_flag = 0;
+      }
+    }    
     if(turn_interrupts == 1)
     {
+      EXIT_flag = 0;
       SaveLMICToRTC(sys.mtdc); 
     }
     else 
@@ -1317,20 +1535,17 @@ void alarm_state(void)
         SaveLMICToRTC(sys.atdc);
       }  
     }  
-    
-    hal_sleep();    
+    GPS_shutdown();
+    LMIC_shutdown();  
     sys.LORA_EnterSleepMode();
-    Serial.flush(); 
-//    gpio_deep_sleep_hold_dis();
-//    if(turn_interrupts == 0) 
-//    {
-      esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
-//    }
-    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low      
-    gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+    rtc_gpio_isolate(GPIO_NUM_27);//mosi
+    esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
+    esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low       
+    gpio_reset();
     if(turn_interrupts == 1)
     {
       esp_sleep_enable_timer_wakeup(sys.mtdc*1000); //设置定时器唤醒 
+      TDC_flag = 1;
       Serial.printf("KEEP TDC:%d\r\n",sys.mtdc);      
     } 
     else
@@ -1339,12 +1554,21 @@ void alarm_state(void)
       {
         if(sys.loggpsdata_send == 0)
         {
-         esp_sleep_enable_timer_wakeup(sys.tdc*1000); //设置定时器唤醒 
-         Serial.printf("TDC:%d\r\n",sys.tdc);
+           esp_sleep_enable_timer_wakeup(sys.tdc*1000); //设置定时器唤醒 
+           TDC_flag = 0;
+          if(sys.pedometer == 1)
+          {
+           
+           Serial.printf("KEEP TDC:%d\r\n",sys.mtdc);  
+          }
+          else
+          {
+            Serial.printf("TDC:%d\r\n",sys.tdc);
+          }
         }
         else
         {
-         esp_sleep_enable_timer_wakeup(10000*1000); //设置定时器唤醒
+          esp_sleep_enable_timer_wakeup(10000*1000); //设置定时器唤醒
         }
       }
       else
@@ -1352,6 +1576,7 @@ void alarm_state(void)
         esp_sleep_enable_timer_wakeup(sys.atdc*1000); //设置定时器唤醒
       }
     }
+    Serial.end();
     esp_deep_sleep_start(); //启动DeepSleep
   }
   else if (sys.exti_flag == 3)
@@ -1400,7 +1625,6 @@ void alarm_state(void)
         }                   
         if(button_Count1  == 1)
         {
-//          Serial.println("imu_power_down");
           myIMU.imu_power_down();  
         }
         sys.mod = sys.save_mode;
@@ -1411,50 +1635,70 @@ void alarm_state(void)
 
 void LIS3DH_configIntterupts(void)
 {
-  myIMU.begin(sampleRate, 1, 1, 1, accelRange);
-//  uint8_t dataToWrite = 0;
-  myIMU.writeRegister(LIS3DH_CTRL_REG1, 0xA7);
-  myIMU.writeRegister(LIS3DH_CTRL_REG2, 0x00);
-  myIMU.writeRegister(LIS3DH_CTRL_REG3, 0x40);
-  myIMU.writeRegister(LIS3DH_CTRL_REG4, 0x00);
-  myIMU.writeRegister(LIS3DH_CTRL_REG5, 0x00);
-  myIMU.writeRegister(LIS3DH_INT1_THS, sys.TF[0]);
-  myIMU.writeRegister(LIS3DH_INT1_DURATION, 0x82);
-  myIMU.writeRegister(LIS3DH_INT1_CFG, 0x0A);
-  
-  uint8_t dataRead;
-   myIMU.readRegister(&dataRead, LIS3DH_INT1_SRC);//cleared by reading
-  if(sys.showid == 1)
+  if(sys.fall_detection == 0 )
   {
-    Serial.print("LIS3DH_INT1_SRC: 0x");
-    Serial.println(dataRead, HEX);
-    Serial.println("Decoded events:");
-  }
-  if(dataRead & 0x40)
-  {
-    interrupts_count = 1;
-    sport_Count =0 ;
-    if(sys.showid == 1)
-    {    
-      Serial.println("Interrupt Active");
+    myIMU.begin(sampleRate, 1, 1, 1, accelRange);
+  //  uint8_t dataToWrite = 0;
+    myIMU.writeRegister(LIS3DH_CTRL_REG1, 0x3f);
+    myIMU.writeRegister(LIS3DH_CTRL_REG2, 0x00);
+    myIMU.writeRegister(LIS3DH_CTRL_REG3, 0x40);
+    myIMU.writeRegister(LIS3DH_CTRL_REG4, 0x00);
+    myIMU.writeRegister(LIS3DH_CTRL_REG5, 0x00);
+    myIMU.writeRegister(LIS3DH_INT1_THS, sys.TF[0]);
+    myIMU.writeRegister(LIS3DH_INT1_DURATION, 0x82);
+    myIMU.writeRegister(LIS3DH_INT1_CFG, 0x0A);
+    myIMU.writeRegister(LIS3DH_CTRL_REG6, 0x00);   
+    uint8_t dataRead;
+    myIMU.readRegister(&dataRead, LIS3DH_INT1_SRC);//cleared by reading     
+    if(dataRead & 0x40)
+    {
+      interrupts_count = 1;
+      sport_Count =0 ;
+      if(sys.showid == 1)
+      {    
+        Serial.println("Interrupt Active");
+      }
     }
+    if(sport_Count == 1 )
+    {
+       interrupts_flag = 2; 
+       sys.keep_flag = 0;
+       sys.exti_flag = 3;
+       interrupts_count = 0;
+       sport_mod = 0;
+       sport_Count = 0;
+       sys.tdc = sys.sys_time;
+    } 
+    if(Pedometer_Count==0 && DFR == 1 )
+    {
+     sys.gps_start = 2;
+     sys.loggpsdata_send = 0;
+     interrupts_flag = 0; 
+    }    
   }
-  if(sport_Count == 1 )
+  else
   {
-     interrupts_flag = 2; 
-     sys.keep_flag = 0;
-     sys.exti_flag = 3;
-     interrupts_count = 0;
-     sport_mod = 0;
-     sport_Count = 0;
-     sys.tdc = sys.sys_time;
-  }  
-//  if(dataRead & 0x20) Serial.println("Z high");
-//  if(dataRead & 0x10) Serial.println("Z low");
-//  if(dataRead & 0x08) Serial.println("Y high");
-//  if(dataRead & 0x04) Serial.println("Y low");
-//  if(dataRead & 0x02) Serial.println("X high");
-//  if(dataRead & 0x01) Serial.println("X low");
+    myIMU.begin(sampleRate, 1, 1, 1, accelRange);
+  //  uint8_t dataToWrite = 0;
+    myIMU.writeRegister(LIS3DH_CTRL_REG1, 0x3f);
+    myIMU.writeRegister(LIS3DH_CTRL_REG2, 0x09);
+    myIMU.writeRegister(LIS3DH_CTRL_REG3, 0x40);
+    myIMU.writeRegister(LIS3DH_CTRL_REG4, 0x00);
+    myIMU.writeRegister(LIS3DH_CTRL_REG5, 0x00);
+    myIMU.writeRegister(LIS3DH_INT1_THS, sys.TF[0]);
+    myIMU.writeRegister(LIS3DH_INT1_DURATION, 0x82);
+    myIMU.writeRegister(LIS3DH_INT1_CFG, 0x2A);
+    myIMU.writeRegister(LIS3DH_CTRL_REG6, 0x00);    
+    uint8_t dataRead;
+    myIMU.readRegister(&dataRead, LIS3DH_INT1_SRC);//cleared by reading
+    
+  }
+//  if(sys.showid == 1)
+//  {
+//    Serial.print("LIS3DH_INT1_SRC: 0x");
+//    Serial.println(dataRead, HEX);
+//    Serial.println("Decoded events:");
+//  }
   delay(100); 
 }
 
@@ -1510,7 +1754,7 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
           if(sys.Intwk == 1)
           {
              LIS3DH_configIntterupts();
-             sys.keep_flag = 1;         
+             sys.keep_flag = 0;         
           }           
           Serial.println("Exit Alarm");          
       }
@@ -1738,7 +1982,34 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
        sys.TF[0] =AppData[1];
       }
     }
-    break;                   
+    break;  
+    case 0xb5:
+    {
+      store_flag = true;
+      if (AppData_Len == 2) //---->AT+PM
+      {
+       sys.atst =AppData[1];
+      }
+    }
+    break;     
+    case 0xb6:
+    {
+      store_flag = true;
+      if (AppData_Len == 2) //---->AT+PM
+      {
+       sys.pedometer =AppData[1];
+      }
+    }
+    break; 
+    case 0xb7:
+    {
+      store_flag = true;
+      if (AppData_Len == 2) //---->AT+FD
+      {
+       sys.fall_detection =AppData[1];
+      }
+    }
+    break;                         
  //...
     default:
       Serial.println("Unknown instruction");

@@ -59,7 +59,7 @@ void attachDuringLongPress()
     {
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 1;
-      operate_flag = 1;
+//      operate_flag = 1;
       if(sys.lon == 1)
       {
         digitalWrite(LED_PIN_RED, HIGH);
@@ -107,7 +107,7 @@ void attachLongPressStop()
      digitalWrite(LED_PIN_RED, LOW);
      digitalWrite(LED_PIN_BLUE, LOW);
      operate_flag = 1;
-     sys.alarm = 1;
+//     sys.alarm = 1;
      sys.sleep_flag = 1;
     }
 }
@@ -119,8 +119,7 @@ void attachMultiClick()
       case 3:
       {
         if(sys.sleep_flag == 1)       //After 10 seconds of long press, the device wakes up from sleep after three quick presses
-        {
-          
+        { 
           operate_flag = 0;
           if(sys.lon == 1)
           {
@@ -136,12 +135,11 @@ void attachMultiClick()
           GXHT3x_LowPower();
           myIMU1.imu_power_down();  
           sys.LORA_EnterSleepMode();
-          esp_deep_sleep_start(); //DeepSleep  
-          
+          esp_deep_sleep_start(); //DeepSleep      
         }
-        Serial.printf("switch3\r\n");
+        Serial.printf("switch:%d\r\n",button.getNumberClicks());
         break;
-      }
+      }      
       case 10:
       {  
         sys.gps_alarm = 0;
@@ -149,6 +147,7 @@ void attachMultiClick()
         sys.alarm = 0;
         sys.keep_flag = 0;
         sys.alarm_count =0;
+        sys.exti_flag = 4; 
         sys.gps_work_flag = false;
         if(sys.sensor_mode == 2 )
         {
@@ -171,13 +170,17 @@ void attachMultiClick()
           }    
           Serial.println("Exit Alarm");  
         }
-        Serial.printf("switch10\r\n");
+        Serial.printf("switch:%d\r\n",button.getNumberClicks());
         break;
       }
       default:{
-    sys.alarm = 0;
-    sys.exti_flag = 2;
-    Serial.printf("switch\r\n",button.getNumberClicks());break;}
+//        sys.gps_alarm = 1;
+//        sys.alarm = 1;
+//        sys.exti_flag = 1;
+//        sys.buzzer_flag = 0;
+//        sys.alarm_no = 1;  
+//        myIMU1.imu_power_down();   
+        Serial.printf("switch:%d\r\n",button.getNumberClicks());break;}
   }
 }
 
@@ -203,7 +206,10 @@ void button_event_init(){
   button.attachLongPressStart(attachLongPressStart);
   button.attachDuringLongPress(attachDuringLongPress);
   button.attachLongPressStop(attachLongPressStop);
-  button.attachMultiClick(attachMultiClick);
+  if(sys.alarm == 1 || sys.fall_detection == 1)
+  {
+    button.attachMultiClick(attachMultiClick);
+  }
 }
 
 //Button detection status subroutine
@@ -216,7 +222,7 @@ void button_attach_loop(){
      {
        operate_flag = 0;  
      }
-    if (millis() - ALARM_STOP > 3000 && millis() - ALARM_STOP <= 4000)
+    if (millis() - ALARM_STOP > 5000 && millis() - ALARM_STOP <= 1000)
     {
 //      Serial.println("operate_flag == 2");
       sys.sleep_flag =0;
@@ -248,6 +254,7 @@ void alarm()
     sys.gps_alarm = 1;
     sys.alarm = 1;
     sys.exti_flag = 1;
+    sys.keep_flag = 1;
     sys.buzzer_flag = 1;
     sys.alarm_no = 1;
     if(sys.lon == 1)

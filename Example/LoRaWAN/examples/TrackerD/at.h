@@ -38,6 +38,9 @@
 #define PNACKMD       "+PNACKMD"
 #define SHOWID        "+SHOWID"
 #define PT            "+PT"
+#define ATST          "+ATST"
+#define PM            "+PM"
+#define FD            "+FD"
 typedef enum
 {
   AT_OK = 0,
@@ -136,6 +139,13 @@ ATEerror_t at_showid_get(const char *param);
 ATEerror_t at_showid_set(const char *param);
 ATEerror_t at_pt_get(const char *param);
 ATEerror_t at_pt_set(const char *param);
+ATEerror_t at_atst_get(const char *param);
+ATEerror_t at_atst_set(const char *param);
+ATEerror_t at_pm_get(const char *param);
+ATEerror_t at_pm_set(const char *param);
+ATEerror_t at_fd_get(const char *param);
+ATEerror_t at_fd_set(const char *param);
+
 static const struct ATCommand_s ATCommand[] =
 {
 /**************** AT+MODEL ****************/  
@@ -492,7 +502,43 @@ static const struct ATCommand_s ATCommand[] =
     .get = at_pt_get,
     .set = at_pt_set,
     .run = at_return_error,
-  },  
+  }, 
+  
+/**************** AT+ATST ****************/  
+  {
+    .string = AT ATST,
+    .size_string = sizeof(ATST) - 1,
+#ifndef NO_HELP
+    .help_string = AT ATST "     : Get or Set serial port AT configuration time",
+#endif
+    .get = at_atst_get,
+    .set = at_atst_set,
+    .run = at_return_error,
+  },   
+
+/**************** AT+PM ****************/  
+  {
+    .string = AT PM,
+    .size_string = sizeof(PM) - 1,
+#ifndef NO_HELP
+    .help_string = AT PM "     : Get or Set pedometer",
+#endif
+    .get = at_pm_get,
+    .set = at_pm_set,
+    .run = at_return_error,
+  }, 
+    
+/**************** AT+FD ****************/  
+  {
+    .string = AT FD,
+    .size_string = sizeof(FD) - 1,
+#ifndef NO_HELP
+    .help_string = AT FD "     : Get or Set fall detection",
+#endif
+    .get = at_fd_get,
+    .set = at_fd_set,
+    .run = at_return_error,
+  },   
 };
 
 ATEerror_t ATInsPro(char* atdata);

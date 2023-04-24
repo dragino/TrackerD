@@ -25,6 +25,7 @@ ATEerror_t at_que(const char *param)
 /**************       ATZ       **************/
 ATEerror_t at_reset_run(const char *param)
 {
+  sys.config_Write();
   ESP.restart();
   return AT_OK;
 }
@@ -34,13 +35,6 @@ ATEerror_t at_fdr_run(const char *param)
 {
   
   sys.DATA_CLEAR();
-//  EEPROM.commit();    
-//  sys.pdop_value = 7.00;
-//  sys.Positioning_time = 180000;
-//  sys.TF[0] ={0x14};
-//  sys.config_Write();  
-//  sys.GPSDATA_CLEAR();
-
   ESP.restart();
 
   return AT_OK;
@@ -50,7 +44,8 @@ ATEerror_t at_fdr_run(const char *param)
 ATEerror_t at_sleep_run(const char *param)
 {
 //  if(keep)
-  Serial.println("sleep");  
+  Serial.println("sleep");
+  sys.FDR_flag = 0; 
   hal_sleep();    
   sys.LORA_EnterSleepMode();
   esp_deep_sleep_start(); //DeepSleep  
@@ -390,7 +385,6 @@ ATEerror_t at_mtdc_set(const char *param)
   return AT_OK;
 }
 
-
 /**************       AT_ATDC       **************/
 ATEerror_t at_atdc_get(const char *param)
 {
@@ -677,6 +671,70 @@ ATEerror_t at_dwelltime_set(const char *param)
     return AT_PARAM_ERROR;
   }
   sys.Dwelltime = is_on;
+  return AT_OK;
+}
+
+/**************       AT_ATST      **************/
+ATEerror_t at_atst_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT ATST "=");
+  Serial.println(sys.atst);
+  return AT_OK;
+}
+ATEerror_t at_atst_set(const char *param)
+{
+  uint32_t atst = atoi(param);
+
+  if(atst > 0xFFFFFFFF || atst<15)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.atst = atst;
+  return AT_OK;
+}
+
+/**************       AT_PM       **************/
+ATEerror_t at_pm_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT PM "=");
+  Serial.println(sys.pedometer);
+  return AT_OK;
+}
+ATEerror_t at_pm_set(const char *param)
+{
+  uint8_t is_on = atoi(param);
+  
+  if(is_on >=2)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.pedometer = is_on;
+  return AT_OK;
+}
+
+/**************       AT_FD      **************/
+ATEerror_t at_fd_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT FD "=");
+  Serial.println(sys.fall_detection);
+  return AT_OK;
+}
+ATEerror_t at_fd_set(const char *param)
+{
+  uint8_t is_on = atoi(param);
+  
+  if(is_on >=2)
+  {
+    return AT_PARAM_ERROR;
+  }
+  if(is_on == 1)
+  {
+   sys.Intwk = 0;
+  }
+  sys.fall_detection = is_on;
   return AT_OK;
 }
 

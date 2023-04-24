@@ -10,9 +10,9 @@
 
 
 #define Pro_model           "TrackerD "
-#define Pro_version         "v1.4.4"
+#define Pro_version         "v1.4.5"
 #define EEPROM_DATA_SIZE    256
-#define EEPROM_KEY_SIZE     68
+#define EEPROM_KEY_SIZE     70
 #define EEPROM_GPSDATA_SIZE 4096
 
 #define BAT_PIN_READ    35
@@ -65,6 +65,8 @@ class SYS:public LORA
     uint8_t     mod = 0;
     uint8_t     lon = 1;      //1:on  2:0ff
     uint32_t    Positioning_time = 180000;
+    uint8_t     atst = 15;
+    uint8_t     pedometer = 0;
     uint8_t     frame = 0;
     uint8_t     FDR_flag = 0;
     uint8_t     alarm = 0;
@@ -75,6 +77,7 @@ class SYS:public LORA
     uint8_t     alarm_no = 0;
     uint8_t     exti_flag = 1;
     uint8_t     exit_off = 1;
+    uint8_t     fall_detection = 0;
     uint8_t     sleep_flag = 0;
     uint8_t     port = 2;
     uint8_t     sensor_mode = 1;
@@ -83,6 +86,7 @@ class SYS:public LORA
     uint8_t     ble_mod = 0;
     uint8_t     save_ble_mode = 0;
     uint16_t    fire_version=0;
+    uint16_t    fire_version_write=0;
     uint8_t     channel_single = 1;
     uint32_t    addr_gps_write=0;
     uint32_t    gps_write=0;
@@ -112,7 +116,7 @@ class Devicet
   public: 
     uint8_t sensor_type;
     
-    uint16_t firm_ver;
+    uint32_t firm_ver;
     
     uint8_t freq_band;
     
