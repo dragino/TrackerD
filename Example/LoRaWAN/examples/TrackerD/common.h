@@ -7,7 +7,6 @@
 #include "extiButton.h"
 #include "blescan.h"
 #include "wifiscan.h"
-#include "notes.h"
 
 
 #define Pro_model           "TrackerD "
@@ -170,5 +169,4 @@ char *rtrim(char* str);
 void StrToHex(uint8_t *pbDest, char *pszSrc, int nLen);
 uint16_t string_touint(void);
 void Device_status();
-void playMelody();
 #endif

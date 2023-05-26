@@ -59,20 +59,18 @@ int BatGet(void)
 void buzzer(void)
 {
   pinMode(BAT_PIN_LOW,OUTPUT);
-  //digitalWrite(BAT_PIN_LOW, LOW);
-  //delay(1000);
+//  digitalWrite(BAT_PIN_LOW, LOW);
+//  delay(1000);
   digitalWrite(BAT_PIN_LOW, HIGH);
   ledcSetup(channel, freq, resolution);
   ledcAttachPin(BAT_PIN_LOW, channel);  
-  //ledcWriteTone(channel, 1000);
-  playMelody();
-  //for (int dutyCycle = 255; dutyCycle <= 255; dutyCycle = dutyCycle + 10) {
-  //    Serial.println(dutyCycle);
-  //  ledcWrite(channel, dutyCycle);
-  //  delay(500);
-  //}
-  //delay(5000);
-  ledcWrite(channel, 0);
+  ledcWriteTone(channel, 2000);
+  for (int dutyCycle = 255; dutyCycle <= 255; dutyCycle = dutyCycle + 10) {
+//    Serial.println(dutyCycle);
+    ledcWrite(channel, dutyCycle);
+    delay(500);
+  }  
+  ledcWrite(channel, 125);
 }
 
 void Stop_buzzer(void)
@@ -81,39 +79,13 @@ void Stop_buzzer(void)
   freq = 0;
   ledcSetup(channel, freq, resolution);
   ledcAttachPin(BAT_PIN_LOW, channel);  
-  ledcWriteTone(channel, 0);
-  //for (int dutyCycle = 0; dutyCycle <= 0; dutyCycle = dutyCycle ) {
-  //    Serial.println(dutyCycle);
-  //    ledcWrite(channel, dutyCycle);
-  //    delay(500);
-  //    break;
-  //}
-}
-
-// plays a tone from a particular pin for a set amount of time
-void tone(byte pin, int freq, int length) {
-  ledcSetup(0, 2000, 8); // setup beeper
-  ledcAttachPin(pin, 0); // attach beeper
-  ledcWriteTone(0, freq); // play tone
-
-  delay(length); // play for as long as specified
-  ledcWriteTone(0, 0); // then turn off
-}
-
-void playMelody() {
-  // notes in the melody:
-  int melody[] = {
-    NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
-  };
-
-  // note durations: 4 = quarter note, 8 = eighth note, etc.:
-  int noteDurations[] = {
-    4, 8, 8, 4, 4, 4, 4, 4
-  };
-  // loop to play the melody specified
-  for (int thisNote = 0; thisNote < sizeof(melody)/sizeof(melody[0]); thisNote++) {
-    tone(channel, melody[thisNote], 1000/noteDurations[thisNote]);
-  }
+  ledcWriteTone(channel, 2000);
+  for (int dutyCycle = 0; dutyCycle <= 0; dutyCycle = dutyCycle ) {
+//    Serial.println(dutyCycle);
+    ledcWrite(channel, dutyCycle);
+    delay(500);
+    break;
+  }  
 }
 
 void gpio_reset(void)

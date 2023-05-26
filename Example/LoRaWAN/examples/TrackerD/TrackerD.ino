@@ -6,6 +6,7 @@
 #define HIGH_RESOLUTION
 #define maxRxSize       128 
 #define EXTI_PIN        0
+
 #define BUTTON_PIN_BITMASK 0x000000001
 
 LIS3DH myIMU(0x19); //Default address is 0x19.
@@ -741,12 +742,12 @@ static void print_wakeup_reason()
       }
     break;
     case ESP_SLEEP_WAKEUP_EXT1 : 
-      gpio_deep_sleep_hold_dis();
+//      gpio_deep_sleep_hold_dis();
       sys.gps_start = 0;
       sys.exti_flag = 0;
       EXIT_flag = 1;
       sport_mod =0;
-      DFR =0;     
+      DFR =0; 
       if(sys.pedometer == 1)
         {
           myIMU.imu_power_down();
@@ -844,7 +845,8 @@ static void print_wakeup_reason()
       {
         sys.atst = 15;   
         sys.FDR_flag = 2; 
-        sys.showid = 0; 
+        sys.showid = 0;
+        sys.channel_single =1;
         sys.lon = 1;   
         sys.pdop_value = 7.00;
         sys.Positioning_time = 180000;
@@ -955,7 +957,7 @@ void setup() {
        LIS3DH_configIntterupts();
      }     
   }   
-  if(sensor.bat<2840)
+  if(sensor.bat<2800 && sys.sensor_mode == 1)
   {
     sys.gps_work_flag = false;
     sensor.latitude  = 0xFFFFFFFF;
@@ -1639,15 +1641,15 @@ void LIS3DH_configIntterupts(void)
   {
     myIMU.begin(sampleRate, 1, 1, 1, accelRange);
   //  uint8_t dataToWrite = 0;
-    myIMU.writeRegister(LIS3DH_CTRL_REG1, 0x3f);
-    myIMU.writeRegister(LIS3DH_CTRL_REG2, 0x00);
+    myIMU.writeRegister(LIS3DH_CTRL_REG1, 0xAF);
+    myIMU.writeRegister(LIS3DH_CTRL_REG2, 0x01);
     myIMU.writeRegister(LIS3DH_CTRL_REG3, 0x40);
     myIMU.writeRegister(LIS3DH_CTRL_REG4, 0x00);
     myIMU.writeRegister(LIS3DH_CTRL_REG5, 0x00);
     myIMU.writeRegister(LIS3DH_INT1_THS, sys.TF[0]);
-    myIMU.writeRegister(LIS3DH_INT1_DURATION, 0x82);
+    myIMU.writeRegister(LIS3DH_INT1_DURATION, 0x03);
     myIMU.writeRegister(LIS3DH_INT1_CFG, 0x0A);
-    myIMU.writeRegister(LIS3DH_CTRL_REG6, 0x00);   
+    myIMU.writeRegister(LIS3DH_CTRL_REG6, 0x00); 
     uint8_t dataRead;
     myIMU.readRegister(&dataRead, LIS3DH_INT1_SRC);//cleared by reading     
     if(dataRead & 0x40)
@@ -1688,7 +1690,7 @@ void LIS3DH_configIntterupts(void)
     myIMU.writeRegister(LIS3DH_INT1_THS, sys.TF[0]);
     myIMU.writeRegister(LIS3DH_INT1_DURATION, 0x82);
     myIMU.writeRegister(LIS3DH_INT1_CFG, 0x2A);
-    myIMU.writeRegister(LIS3DH_CTRL_REG6, 0x00);    
+    myIMU.writeRegister(LIS3DH_CTRL_REG6, 0x00);   
     uint8_t dataRead;
     myIMU.readRegister(&dataRead, LIS3DH_INT1_SRC);//cleared by reading
     
@@ -1858,6 +1860,14 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
       if( AppData_Len == 2 )
       {
         sys.PNACKmd = AppData[1];
+        if(AppData[1] == 0)
+        {
+           sys.frame_flag = 0;
+        }
+        else
+        {
+          sys.frame_flag = 1;
+        }        
       }
     }    
     break;        
@@ -1869,12 +1879,14 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
         sys.mod = AppData[1];
         sys.save_mode = AppData[1];
        }
-       if(AppData_Len == 3 )//AT+SMOD = 1,0
+       if(AppData_Len == 4 )//AT+SMOD = 1,0
        {
         sys.sensor_mode = AppData[1];
         sys.save_sensor_mode = AppData[1];
         sys.mod = AppData[2];
         sys.save_mode = AppData[2];
+        sys.ble_mod = AppData[3];
+        sys.save_ble_mode = AppData[3];          
        }
     }
     break;

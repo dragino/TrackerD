@@ -410,7 +410,7 @@ ATEerror_t at_ftime_get(const char *param)
 {
   if(keep)
     Serial.print(AT FTIME "=");
-  Serial.println(sys.Positioning_time);
+  Serial.println(sys.Positioning_time/1000);
   return AT_OK;
 }
 ATEerror_t at_ftime_set(const char *param)
