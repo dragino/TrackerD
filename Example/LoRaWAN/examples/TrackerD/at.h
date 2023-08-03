@@ -14,6 +14,7 @@
 #define ADR           "+ADR"
 #define DR            "+DR"
 #define TXP           "+TXP"
+#define NJM           "+NJM"
 #define CFG           "+CFG"
 #define RESET         "Z"
 #define FDR           "+FDR"
@@ -41,6 +42,9 @@
 #define ATST          "+ATST"
 #define PM            "+PM"
 #define FD            "+FD"
+#define BG            "+BG"
+#define BEEP          "+BEEP"
+#define EAT           "+EAT"
 typedef enum
 {
   AT_OK = 0,
@@ -110,6 +114,8 @@ ATEerror_t at_dr_get(const char *param);
 ATEerror_t at_dr_set(const char *param);
 ATEerror_t at_txp_get(const char *param);
 ATEerror_t at_txp_set(const char *param);
+ATEerror_t at_njm_get(const char *param);
+ATEerror_t at_njm_set(const char *param);
 ATEerror_t at_ftime_get(const char *param);
 ATEerror_t at_ftime_set(const char *param);
 ATEerror_t at_intwk_get(const char *param);
@@ -145,7 +151,12 @@ ATEerror_t at_pm_get(const char *param);
 ATEerror_t at_pm_set(const char *param);
 ATEerror_t at_fd_get(const char *param);
 ATEerror_t at_fd_set(const char *param);
-
+ATEerror_t at_bg_get(const char *param);
+ATEerror_t at_bg_set(const char *param);
+ATEerror_t at_beep_get(const char *param);
+ATEerror_t at_beep_set(const char *param);
+ATEerror_t at_eat_get(const char *param);
+ATEerror_t at_eat_set(const char *param);
 static const struct ATCommand_s ATCommand[] =
 {
 /**************** AT+MODEL ****************/  
@@ -289,6 +300,17 @@ static const struct ATCommand_s ATCommand[] =
 #endif
     .get = at_txp_get,
     .set = at_txp_set,
+    .run = at_return_error,
+  },
+/**************** AT+NJM ****************/  
+  {
+    .string = AT NJM,
+    .size_string = sizeof(NJM) - 1,
+#ifndef NO_HELP
+    .help_string = "AT" NJM "     : Get or Set the Network Join Mode. (0: ABP, 1: OTAA)",
+#endif
+    .get = at_njm_get,
+    .set = at_njm_set,
     .run = at_return_error,
   },
 /**************** AT+SMOD ****************/  
@@ -539,6 +561,42 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_fd_set,
     .run = at_return_error,
   },   
+
+/**************** AT+BG ****************/  
+  {
+    .string = AT BG,
+    .size_string = sizeof(BG) - 1,
+#ifndef NO_HELP
+    .help_string = AT BG "     : Get or Set payload GPS time",
+#endif
+    .get = at_bg_get,
+    .set = at_bg_set,
+    .run = at_return_error,
+  },  
+
+/**************** AT+BEEP ****************/  
+  {
+    .string = AT BEEP,
+    .size_string = sizeof(BEEP) - 1,
+#ifndef NO_HELP
+    .help_string = AT BEEP "     : Get or Set turn on or off the buzzer",
+#endif
+    .get = at_beep_get,
+    .set = at_beep_set,
+    .run = at_return_error,
+  },
+
+/**************** AT+EAT ****************/  
+  {
+    .string = AT EAT,
+    .size_string = sizeof(EAT) - 1,
+#ifndef NO_HELP
+    .help_string = AT EAT "     : Get or Set long press time",
+#endif
+    .get = at_eat_get,
+    .set = at_eat_set,
+    .run = at_return_error,
+  },    
 };
 
 ATEerror_t ATInsPro(char* atdata);

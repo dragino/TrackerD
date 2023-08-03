@@ -8,9 +8,8 @@
 #include "blescan.h"
 #include "wifiscan.h"
 
-
 #define Pro_model           "TrackerD "
-#define Pro_version         "v1.4.5"
+#define Pro_version         "v1.4.6"
 #define EEPROM_DATA_SIZE    256
 #define EEPROM_KEY_SIZE     70
 #define EEPROM_GPSDATA_SIZE 4096
@@ -67,6 +66,9 @@ class SYS:public LORA
     uint32_t    Positioning_time = 180000;
     uint8_t     atst = 15;
     uint8_t     pedometer = 0;
+    uint8_t     ble_gps = 0;
+    uint8_t     beep_flag = 0;
+    uint32_t     exit_alarm_time = 2000;
     uint8_t     frame = 0;
     uint8_t     FDR_flag = 0;
     uint8_t     alarm = 0;
@@ -84,6 +86,7 @@ class SYS:public LORA
     uint8_t     save_sensor_mode = 1;
     uint8_t     save_mode = 0;
     uint8_t     ble_mod = 0;
+    uint8_t     njm = 1;
     uint8_t     save_ble_mode = 0;
     uint16_t    fire_version=0;
     uint16_t    fire_version_write=0;
@@ -160,6 +163,8 @@ extern Devicet devicet;
 
 int BatGet(void);
 void buzzer(void);
+void ABP_Band_information(void);
+void ABP_InIt(void);
 void Stop_buzzer(void);
 void gpio_reset(void);
 void Device_status();

@@ -44,7 +44,7 @@ void attachDuringLongPress()
     {    
         digitalWrite(LED_PIN_GREEN, HIGH);
     }
-    if (millis() - ALARM_START > 5000 && millis() - ALARM_START  < 10000)
+    if (millis() - ALARM_START > sys.exit_alarm_time && millis() - ALARM_START  < 10000)
     {
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 0;

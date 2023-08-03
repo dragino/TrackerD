@@ -80,16 +80,18 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 //            Serial.println("");
             memset(bufftest,0,sizeof(bufftest));
             memcpy(bufftest,pHex+8,strlen(pHex)-8);
-            strcat(bufftest,brssi);         
-            if((strlen(sys.blemask_data)<6 ||( sys.blemask_data[0] == '0' && sys.blemask_data[1] == '0' & sys.blemask_data[2] == '0' & sys.blemask_data[3] == '0' & sys.blemask_data[4] == '0' & sys.blemask_data[5] == '0'))&& bRSSI >= -90)
+            strcat(bufftest,brssi); 
+            int len = strlen(sys.blemask_data);         
+            if((strlen(sys.blemask_data) == 0 ||len <6 ||( sys.blemask_data[0] == '0' && sys.blemask_data[1] == '0' & sys.blemask_data[2] == '0' & sys.blemask_data[3] == '0' & sys.blemask_data[4] == '0' & sys.blemask_data[5] == '0'))&& bRSSI >= -90)
             {
               sc_count++;  
               if(sys.showid == 1)
               {
-                Serial.printf("blemask_data\r\n",sys.blemask_data);
+                Serial.printf("blemask_data:%d\r\n",sys.blemask_data);
                 Serial.printf("bufftest:%s\r\n", bufftest);
                 Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
               }
+              Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
               strcat(sys.BLEDATA,bufftest);
               if(sc_count == 1)
               {
@@ -225,8 +227,9 @@ void ble_run()
 //Bluetooth scan data processing
 void ble_data(void)
 {
-
   sys.exti_flag = 1;
+  Serial.printf("sc_count= %d\r\n",sc_count);
+  Serial.printf("DATA Length= %d\r\n",strlen(sys.BLEDATA));
   if(sys.exti_flag != 3 && sc_count != 0)
   {
 //    Serial.printf("DATA Length= %d\r\n",strlen(sys.BLEDATA));
@@ -236,9 +239,10 @@ void ble_data(void)
 //    }
 //    Serial.println("");
     int len = strlen(sys.BLEDATA)/45;
-    if(strlen(sys.BLEDATA) < 135)
+    if(len < 3)
     {
       sys.ble_mod = 1;
+      Serial.println("*******12345");
     }
     if(sys.ble_mod == 0) //Find the three optimal beacons
     {
@@ -319,9 +323,8 @@ void ble_data(void)
       }
     } 
   }
-  else if(sys.sensor_mode == 2 && sc_count == 0)
+  else if(sys.sensor_mode == 2 && sc_count == 0 )
   {
-    
     for(int i=0;i<45;i++)
     {
       sys.BLEDATA1[i]= {'f'};

@@ -190,6 +190,115 @@ void Device_status()
   devicet.FLAG = ((sys.PNACKmd<<2)|(sys.lon<<1)|sys.Intwk)&0xFF;
   
 }
+void ABP_Band_information(void)
+{
+   #if defined(CFG_eu868)
+    // Set up the channels used by the Things Network, which corresponds
+    // to the defaults of most gateways. Without this, only three base
+    // channels from the LoRaWAN specification are used, which certainly
+    // works, so it is good for debugging, but can overload those
+    // frequencies, so be sure to configure the full frequency range of
+    // your network here (unless your network autoconfigures them).
+    // Setting up channels should happen after LMIC_setSession, as that
+    // configures the minimal channel set. The LMIC doesn't let you change
+    // the three basic settings, but we show them here.
+    LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+    LMIC_setupChannel(1, 868300000, DR_RANGE_MAP(DR_SF12, DR_SF7B), BAND_CENTI);      // g-band
+    LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+//    LMIC_setupChannel(3, 867100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+//    LMIC_setupChannel(4, 867300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+//    LMIC_setupChannel(5, 867500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+//    LMIC_setupChannel(6, 867700000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+//    LMIC_setupChannel(7, 867900000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+//    LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(DR_FSK,  DR_FSK),  BAND_MILLI);      // g2-band
+    // TTN defines an additional channel at 869.525Mhz using SF9 for class B
+    // devices' ping slots. LMIC does not have an easy way to define set this
+    // frequency and support for class B is spotty and untested, so this
+    // frequency is not configured here.
+    #elif defined(CFG_us915) || defined(CFG_au915)
+    // NA-US and AU channels 0-71 are configured automatically
+    // but only one group of 8 should (a subband) should be active
+    // TTN recommends the second sub band, 1 in a zero based count.
+    // https://github.com/TheThingsNetwork/gateway-conf/blob/master/US-global_conf.json
+    LMIC_selectSubBand(sys.channel_single);
+    #elif defined(CFG_as923)
+    // Set up the channels used in your country. Only two are defined by default,
+    // and they cannot be changed.  Use BAND_CENTI to indicate 1% duty cycle.
+     LMIC_setupChannel(0, 923200000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
+     LMIC_setupChannel(1, 923400000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
+
+    // ... extra definitions for channels 2..n here
+    #elif defined(CFG_kr920)
+    // Set up the channels used in your country. Three are defined by default,
+    // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
+    // BAND_MILLI.
+     LMIC_setupChannel(0, 922100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(1, 922300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(2, 922500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+
+    // ... extra definitions for channels 3..n here.
+    #elif defined(CFG_in866)
+    // Set up the channels used in your country. Three are defined by default,
+    // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
+    // BAND_MILLI.
+     LMIC_setupChannel(0, 865062500, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(1, 865402500, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(2, 865985000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+
+    // ... extra definitions for channels 3..n here.
+    #elif defined(CFG_kz865)
+    // Set up the channels used in your country. Three are defined by default,
+    // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
+    // BAND_MILLI.
+     LMIC_setupChannel(0, 865100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(1, 865302500, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(2, 865585000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+
+    // ... extra definitions for channels 2..n here.
+    #elif defined(CFG_ru864)
+    // Set up the channels used in your country. Three are defined by default,
+    // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
+    // BAND_MILLI.
+     LMIC_setupChannel(0, 868900000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(1, 869100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+
+    // ... extra definitions for channels 3..n here.
+    #elif defined(CFG_ma869)
+    // Set up the channels used in your country. Three are defined by default,
+    // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
+    // BAND_MILLI.
+     LMIC_setupChannel(0, 869100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(1, 869300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+     LMIC_setupChannel(2, 869500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);     
+    #else
+    # error Region not supported
+    #endif
+      
+    LMIC_setLinkCheckMode(0);
+    if(sys.LORA_GetADR() == ADR_ENABLE)
+    {
+      LMIC_setAdrMode(0);
+      LMIC_setDrTxpow(sys.LORA_GetDR(),sys.LORA_GetTXP());
+    }
+    else
+    {
+      sys.LORA_SetDR(LMIC.datarate);
+    }       
+}
+
+void ABP_InIt(void)
+{
+    uint8_t appskey_buff[16]={0};
+    sys.LORA_GetAPPSKEY(appskey_buff); 
+    uint8_t nwkskey_buff[16]={0};
+    sys.LORA_GetNWKSKEY(nwkskey_buff);       
+    uint8_t appskey[sizeof(appskey_buff)];
+    uint8_t nwkskey[sizeof(nwkskey_buff)];
+    memcpy_P(appskey, appskey_buff, sizeof(appskey_buff));
+    memcpy_P(nwkskey, nwkskey_buff, sizeof(nwkskey_buff));
+    LMIC_setSession (0x13, sys.LORA_GetDevaddr(), nwkskey_buff, appskey_buff);    
+
+}
 
 void SYS::Band_information(void)
 {
@@ -201,9 +310,9 @@ void SYS::Band_information(void)
     Serial.println("IN865");
   #elif defined( CFG_au915 )
     Serial.println("AU915");
-  #elif defined( CFG_KZ865 )
+  #elif defined( CFG_kz865 )
     Serial.println("KZ865");
-  #elif defined( CFG_RU864 )
+  #elif defined( CFG_ru864 )
     Serial.println("RU864");
   #elif defined( CFG_as923 )
     #if defined AS923_1
@@ -223,7 +332,7 @@ void SYS::Band_information(void)
     Serial.println("EU433");
   #elif defined( CFG_kr920 ) 
     Serial.println("KR920");
-  #elif defined( REGION_MA869 ) 
+  #elif defined( REGION_ma869 ) 
     Serial.println("MA869");
   #else
    Serial.println("********");
@@ -352,13 +461,17 @@ void SYS::config_Write(void)
     KEY.writeUChar(addr, buff[i]);               
     addr += sizeof(unsigned char);
   }
-  addr =68;
-  KEY.writeUChar(addr,fire_version_write);               
-  addr += sizeof(unsigned char);    
+
 //devaddr
   data_32 = LORA_GetDevaddr();
   KEY.writeUInt(addr, data_32);           
   addr += sizeof(unsigned int);
+  
+  addr =68;
+  
+  KEY.writeUChar(addr,fire_version_write);               
+  addr += sizeof(unsigned char);    
+
 //tdc
   DATA.writeUInt(addr1, tdc);               
   addr1 += sizeof(unsigned int);
@@ -510,15 +623,29 @@ void SYS::config_Write(void)
   DATA.writeUChar(addr1, data_8);               
   addr1 += sizeof(unsigned char);  
   
+  data_8 = ble_gps;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char); 
+
+  DATA.writeUInt(addr1, exit_alarm_time);               
+  addr1 += sizeof(unsigned int); 
+
+  data_8 = beep_flag;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char); 
+
+  data_8 = njm;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);
   if(sys.blemask_flag == 1)
   {
-    addr1 =67;
+    addr1 =74;
     for(int i=0;i<3;i++)
     {
       DATA.writeUInt(addr1, 0);          
       addr1 += sizeof(unsigned int);
     }     
-    addr1 =67;
+    addr1 =74;
     for(int i=0,j = 0;i<strlen(sys.blemask_data);i=i+4,j++)
     {
       DATA.writeUInt(addr1, s_config[config_count++]=(sys.blemask_data[i+0]<<24)|(sys.blemask_data[i+1]<<16)|(sys.blemask_data[i+2]<<8)|(sys.blemask_data[i+3]));          
@@ -529,13 +656,13 @@ void SYS::config_Write(void)
   }  
   if(sys.blemask_flag == 2)
   {
-    addr1 = 80 ;
+    addr1 = 88;
     for(int i=0;i<3;i++)
     {
       DATA.writeUInt(addr1, s_config1[0]=0);          
       addr1 += sizeof(unsigned int);
     }  
-    addr1 = 80 ;    
+    addr1 = 88;    
     for(int i=0,j = 0;i<strlen(sys.wifimask_data);i=i+4,j++)
     {   
       DATA.writeUInt(addr1, s_config1[config_count1++]=(sys.wifimask_data[i+0]<<24)|(sys.wifimask_data[i+1]<<16)|(sys.wifimask_data[i+2]<<8)|(sys.wifimask_data[i+3]));               
@@ -742,7 +869,22 @@ void SYS::config_Read(void)
   data_8 = DATA.readByte(addr1);      
   fall_detection = data_8;         
   addr1 += sizeof(byte); 
+  
+  data_8 = DATA.readByte(addr1);      
+  ble_gps = data_8;         
+  addr1 += sizeof(byte);
+  
+  exit_alarm_time = DATA.readUInt(addr1);
+  addr1 += sizeof(unsigned int);
     
+  data_8 = DATA.readByte(addr1);      
+  beep_flag = data_8;         
+  addr1 += sizeof(byte);
+
+  data_8 = DATA.readByte(addr1);      
+  njm = data_8;         
+  addr1 += sizeof(byte);
+
   for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
     s_config[i] = DATA.readUInt(addr1);
@@ -752,7 +894,7 @@ void SYS::config_Read(void)
     blemask_data[j+2]= s_config[0+i]>>8;
     blemask_data[j+3]= s_config[0+i];
   } 
-  addr1 = 80;
+  addr1 = 88;
   for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
     s_config1[i] = DATA.readUInt(addr1);

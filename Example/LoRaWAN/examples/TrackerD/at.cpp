@@ -289,6 +289,29 @@ ATEerror_t at_txp_set(const char *param)
   return AT_OK;
 }
 
+/**************       AT_NJM       **************/
+ATEerror_t at_njm_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT NJM"=");
+  Serial.printf("%d\r\n",sys.njm); 
+  return AT_OK;
+}
+
+ATEerror_t at_njm_set(const char *param)
+{
+  uint8_t njm= atoi(param);
+  if(strlen(param)!=1)
+    return AT_PARAM_ERROR;
+  if(njm>1)
+  {
+    return AT_PARAM_ERROR;
+  }
+  Serial.println("Attention:Take effect after ATZ");
+  sys.njm=njm;
+  return AT_OK;
+}
+
 /**************       AT_MODEL       **************/
 ATEerror_t at_model_get(const char *param)
 {
@@ -694,6 +717,26 @@ ATEerror_t at_atst_set(const char *param)
   return AT_OK;
 }
 
+/**************       AT_EAT      **************/
+ATEerror_t at_eat_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT EAT "=");
+  Serial.println(sys.exit_alarm_time/1000);
+  return AT_OK;
+}
+ATEerror_t at_eat_set(const char *param)
+{
+  uint32_t eat = atoi(param);
+
+//  if(eat > 0xFFFFFFFF || eat<10)
+//  {
+//    return AT_PARAM_ERROR;
+//  }
+  sys.exit_alarm_time = eat*1000;
+  return AT_OK;
+}
+
 /**************       AT_PM       **************/
 ATEerror_t at_pm_get(const char *param)
 {
@@ -738,6 +781,45 @@ ATEerror_t at_fd_set(const char *param)
   return AT_OK;
 }
 
+/**************       AT_BG      **************/
+ATEerror_t at_bg_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT BG "=");
+  Serial.println(sys.ble_gps);
+  return AT_OK;
+}
+ATEerror_t at_bg_set(const char *param)
+{
+  uint8_t is_on = atoi(param);
+  
+  if(is_on >=2)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.ble_gps = is_on;
+  return AT_OK;
+}
+
+/**************       AT_BBEP      **************/
+ATEerror_t at_beep_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT BEEP "=");
+  Serial.println(sys.beep_flag);
+  return AT_OK;
+}
+ATEerror_t at_beep_set(const char *param)
+{
+  uint8_t is_on = atoi(param);
+  
+  if(is_on >=2)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.beep_flag = is_on;
+  return AT_OK;
+}
 /**************       AT_BLEMASK       **************/
 ATEerror_t at_blemask_get(const char *param)
 {
