@@ -2,7 +2,7 @@
 #define _config_h_
 
 #define Pro_model           "TrackerD "
-#define Pro_version         "v1.4.3"
+#define Pro_version         "v1.4.9"
 //#define EEPROM_SIZE         128
 //#define EEPROM_KEY_SIZE     32
 

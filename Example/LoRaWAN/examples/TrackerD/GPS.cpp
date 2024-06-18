@@ -84,6 +84,7 @@ bool GPS_DATA(void)
           Serial.printf("Time: %d:%d:%d\n\r",(sensor.hour_gps<16)?sensor.hour_gps+8:sensor.hour_gps-16,sensor.minute_gps,sensor.second_gps);
           Serial.printf("PDOP = %0.2f\n\r",sensor.pdop_gps);
           Serial.printf("Fix Status = %d\n\r",sensor.Fix_Status);
+          
         }         
         if((sensor.year_gps!=0)&&(sensor.month_gps!=0)&&(sensor.day_gps != 2000))
         {
@@ -103,6 +104,7 @@ bool GPS_DATA(void)
             Serial.printf("Longitude = %0.6f\n\r",longitude);
             Serial.printf("Date: %d-%d-%d\n\r",sensor.year_gps,sensor.month_gps,sensor.day_gps);
             Serial.printf("Time: %d:%d:%d\n\r",(sensor.hour_gps<16)?sensor.hour_gps+8:sensor.hour_gps-16,sensor.minute_gps,sensor.second_gps);
+            Serial.printf("Fix Time:%dms\r\n",millis() - last);
             int i = 0;
             sys.gps_data_buff[i++] = (sensor.latitude>>24)  & 0xFF;
             sys.gps_data_buff[i++] = (sensor.latitude>>16)  & 0xFF;
@@ -119,15 +121,31 @@ bool GPS_DATA(void)
             sys.gps_data_buff[i++] = (sensor.hour_gps)      & 0xFF;
             sys.gps_data_buff[i++] = (sensor.minute_gps)    & 0xFF;
             sys.gps_data_buff[i++] = (sensor.second_gps)    & 0xFF; 
+            if(sys.sensor_type == 22)  
+            {
+              sensor.bat = BatGet(); 
+              sys.gps_data_buff[i++] = (sensor.bat>>8)        & 0xFF;
+              sys.gps_data_buff[i++] = (sensor.bat)           & 0xFF;  
+            }             
+
 //            sys.gps_data_Weite();
 //            Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);    
 //            sys.read_gps_data_on_flash();
 //            Serial.printf("addr_gps_read:%d\r\n",sys.addr_gps_read);       
             if(sys.lon == 1)
             {
-              digitalWrite(LED_PIN_BLUE, HIGH);
-              delay(1000); 
-              digitalWrite(LED_PIN_BLUE, LOW);
+              if(sys.sensor_type == 22)  
+              {              
+                digitalWrite(LED_PIN_BLUE1, HIGH);
+                delay(1000); 
+                digitalWrite(LED_PIN_BLUE1, LOW);
+              }
+              else
+              {
+                digitalWrite(LED_PIN_BLUE, HIGH);
+                delay(1000); 
+                digitalWrite(LED_PIN_BLUE, LOW);                
+              }
             }
             return true;
           }
@@ -135,10 +153,20 @@ bool GPS_DATA(void)
           {
             if(sys.lon == 1)
             {
-              digitalWrite(LED_PIN_BLUE, HIGH);
-              delay(100);   
-              digitalWrite(LED_PIN_BLUE, LOW);  
-              delay(100); 
+              if(sys.sensor_type == 22)  
+              {              
+                digitalWrite(LED_PIN_BLUE1, HIGH);
+                delay(100); 
+                digitalWrite(LED_PIN_BLUE1, LOW);
+                delay(100);
+              }
+              else
+              {
+                digitalWrite(LED_PIN_BLUE, HIGH);
+                 delay(100); 
+                digitalWrite(LED_PIN_BLUE, LOW);   
+                 delay(100);             
+              }
             }        
             if (millis() - last > 30000)
             {
@@ -153,10 +181,20 @@ bool GPS_DATA(void)
         {  
           if(sys.lon == 1)
           {
-            digitalWrite(LED_PIN_BLUE, HIGH);
-            delay(100);   
-            digitalWrite(LED_PIN_BLUE, LOW);  
-            delay(100); 
+              if(sys.sensor_type == 22)  
+              {              
+                digitalWrite(LED_PIN_BLUE1, HIGH);
+                delay(100); 
+                digitalWrite(LED_PIN_BLUE1, LOW);
+                delay(100);
+              }
+              else
+              {
+                digitalWrite(LED_PIN_BLUE, HIGH);
+                 delay(100); 
+                digitalWrite(LED_PIN_BLUE, LOW);   
+                 delay(100);             
+              }
           }        
           if (millis() - last > 30000)
           {

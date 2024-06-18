@@ -22,7 +22,9 @@ int sc_count =0;
 int sc_flag =0,num = 0;
 int mod =0;
 char bufftest[100];
-
+char bufftest1[100];
+uint8_t mydata1[5] = {0};
+uint8_t bledata1[240]= {0};
 BLEBeacon id;
 
 String reverse(String str) {
@@ -42,156 +44,117 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         {
           std::string strManufacturerData = advertisedDevice.getManufacturerData();
           int dataLength = advertisedDevice.getManufacturerData().length();
-          char *pHex = BLEUtils::buildHexData(nullptr, (uint8_t*)advertisedDevice.getManufacturerData().data(), dataLength);       
+          char *pHex = BLEUtils::buildHexData(nullptr, (uint8_t*)advertisedDevice.getManufacturerData().data(), dataLength);    
           char cManufacturerData[100];
           strManufacturerData.copy((char *)cManufacturerData, strManufacturerData.length(), 0);      
           if (strManufacturerData.length() == 25 && cManufacturerData[0] == 0x4C && cManufacturerData[1] == 0x00 && strlen(pHex) == 50)
           {
-            if(sys.lon == 1)
-            {
-              digitalWrite(2, HIGH);
-            }
-            BLEBeacon oBeacon = BLEBeacon();
-            oBeacon.setData(strManufacturerData);
-            Serial.println("Found an iBeacon!");
-            id.setData(advertisedDevice.getManufacturerData());
-            //Print UUID
-//            Serial.print("UUID :");
-            String bUUID = id.getProximityUUID().toString().c_str();
-            bUUID = reverse(bUUID);
-//            Serial.print(bUUID);
-      
-            //Print RSSI
-//            Serial.print(",RSSI :");
-            int bRSSI = advertisedDevice.getRSSI();
-//            Serial.print(bRSSI);
-            ltoa(bRSSI,brssi,10);
-//            Serial.printf(brssi);
-            
-            //Print Major
-//            Serial.print(",Major :");
-            int bMajor = id.getMajor() / 256;
-//            Serial.print(bMajor);
-      
-            //Print Minor
-//            Serial.print(",Minor :");
-            int bMinor = id.getMinor() / 256;
-//            Serial.print(bMinor);
-//            Serial.println("");
+              if(sys.lon == 1)
+              {
+                digitalWrite(2, HIGH);
+              }
+              BLEBeacon oBeacon = BLEBeacon();
+              oBeacon.setData(strManufacturerData);
+              Serial.println("Found an iBeacon!");
+              id.setData(advertisedDevice.getManufacturerData());
+              //Print UUID
+  //            Serial.print("UUID :");
+              String bUUID = id.getProximityUUID().toString().c_str();
+              bUUID = reverse(bUUID);
+  //            Serial.print(bUUID);
+        
+              //Print RSSI
+  //            Serial.print(",RSSI :");
+              int bRSSI = advertisedDevice.getRSSI();
+              Serial.print(bRSSI);
+              ltoa(bRSSI,brssi,10);
+  //            Serial.printf(brssi);
+              
+              //Print Major
+  //            Serial.print(",Major :");
+              int bMajor = id.getMajor() / 256;
+  //            Serial.print(bMajor);
+        
+              //Print Minor
+  //            Serial.print(",Minor :");
+              int bMinor = id.getMinor() / 256;
+  //            Serial.print(bMinor);
+              Serial.println("");
+              memset(mydata1,0,sizeof(mydata1));
+              memcpy(bufftest1,pHex+40,strlen(pHex)-42);
+              int i=0,j=0;
+              for(;i<(strlen(bufftest1)/4)+2;i++,j++)
+              {
+                char str[5] = {0};
+                memcpy(str,bufftest1+i*4,4);
+                int num = hexToint_ble(str);
+                mydata1[j*2] = num>>8;
+                mydata1[j*2+1] = num; 
+              }    
+              for(i=4;i<5;i++)
+              {
+                 mydata1[i] = bRSSI;  
+              }
+             if(sys.showid == 1)
+             {                            
+              for(int i=0;i<5;i++)
+                  Serial.printf("%.2x ",mydata1[i]);
+              Serial.println();
+             }         
+            int len =0;
             memset(bufftest,0,sizeof(bufftest));
             memcpy(bufftest,pHex+8,strlen(pHex)-8);
             strcat(bufftest,brssi); 
-            int len = strlen(sys.blemask_data);         
+            len = strlen(sys.blemask_data);   
             if((strlen(sys.blemask_data) == 0 ||len <6 ||( sys.blemask_data[0] == '0' && sys.blemask_data[1] == '0' & sys.blemask_data[2] == '0' & sys.blemask_data[3] == '0' & sys.blemask_data[4] == '0' & sys.blemask_data[5] == '0'))&& bRSSI >= -90)
             {
-              sc_count++;  
-              if(sys.showid == 1)
+               sc_count++;  
+               if(sys.showid == 1 && sys.ble_mod != 3)
+               {
+                  Serial.printf("blemask_data:%d\r\n",sys.blemask_data);
+                  Serial.printf("bufftest:%s\r\n", bufftest);
+                  Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
+               }
+               strcat(sys.BLEDATA,bufftest);
+              if(sys.ble_mod == 3)
               {
-                Serial.printf("blemask_data:%d\r\n",sys.blemask_data);
-                Serial.printf("bufftest:%s\r\n", bufftest);
-                Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
-              }
-              Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
-              strcat(sys.BLEDATA,bufftest);
-              if(sc_count == 1)
-              {
-                memcpy(sys.BLEDATA1,pHex+8,strlen(pHex)-8); 
-                strcat(sys.BLEDATA1,brssi);
-                if(sys.showid == 1)
+                if(sc_count<=40)
                 {
-                  Serial.printf("BLEDATA1:%s\r\n", sys.BLEDATA1);
-                }
-              }
-              if(sc_count == 2)
-              {
-                memcpy(sys.BLEDATA2,pHex+8,strlen(pHex)-8);
-                strcat(sys.BLEDATA2,brssi);
-                if(sys.showid == 1)
-                {
-                  Serial.printf("BLEDATA2:%s\r\n", sys.BLEDATA2);
-                }
-              }
-              if(sc_count == 3)
-              {
-                memcpy(sys.BLEDATA3,pHex+8,strlen(pHex)-8); 
-                strcat(sys.BLEDATA3,brssi);
-                if(sys.showid == 1)
-                {
-                  Serial.printf("BLEDATA3:%s\r\n", sys.BLEDATA3);
-                }
-              }
-              if(sc_count == 4)
-              {
-                memcpy(sys.BLEDATA4,pHex+8,strlen(pHex)-8); 
-                strcat(sys.BLEDATA4,brssi);
-                if(sys.showid == 1)
-                {
-                  Serial.printf("BLEDATA4:%s\r\n", sys.BLEDATA4);
-                }
-              }
-              if(sc_count == 5)
-              {
-                memcpy(sys.BLEDATA5,pHex+8,strlen(pHex)-8); 
-                strcat(sys.BLEDATA5,brssi);
-                if(sys.showid == 1)
-                {
-                  Serial.printf("BLEDATA5:%s\r\n", sys.BLEDATA5);
-                }
-              }              
+                  for(int i=0;i<5;i++)
+                  {
+                    bledata1[i+sys.blecount] = mydata1[i];
+//                    sys.blecount++;
+                  }
+//                  for(int i=0;i<sc_count*5;i++)
+//                      Serial.printf("%.2x ",bledata1[i]);
+//                  Serial.println();                  
+                  sys.blecount = sc_count*5;
+//                  Serial.printf("sys.blecount:%d\r\n", sys.blecount);                            
+                } 
+              }            
             }
             else if(strstr(bufftest,sys.blemask_data) != NULL && bRSSI >= -90)
             {
-              sc_count++;  
-              if(sys.showid == 1)
-              {
+                sc_count++;  
+               if(sys.showid == 1 && sys.ble_mod != 3)
+               {
                 Serial.printf("bufftest:%s\r\n", bufftest);
                 Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
-              }
-              strcat(sys.BLEDATA,bufftest);
-              if(sc_count == 1)
+               } 
+               strcat(sys.BLEDATA,bufftest);            
+              if(sys.ble_mod == 3)
               {
-                memcpy(sys.BLEDATA1,pHex+8,strlen(pHex)-8); 
-                strcat(sys.BLEDATA1,brssi);
-                if(sys.showid == 1)
+                if(sc_count <=40)
                 {
-                  Serial.printf("BLEDATA1:%s\r\n", sys.BLEDATA1);
-                }
-              }
-              if(sc_count == 2)
-              {
-                memcpy(sys.BLEDATA2,pHex+8,strlen(pHex)-8);
-                strcat(sys.BLEDATA2,brssi);
-                {
-                  Serial.printf("BLEDATA2:%s\r\n", sys.BLEDATA2);
-                }
-              }
-              if(sc_count == 3)
-              {
-                memcpy(sys.BLEDATA3,pHex+8,strlen(pHex)-8); 
-                strcat(sys.BLEDATA3,brssi);
-                if(sys.showid == 1)
-                {
-                  Serial.printf("BLEDATA3:%s\r\n", sys.BLEDATA3);
-                }
-              }
-              if(sc_count == 4)
-              {
-                memcpy(sys.BLEDATA4,pHex+8,strlen(pHex)-8); 
-                strcat(sys.BLEDATA4,brssi);
-                if(sys.showid == 1)
-                {
-                 Serial.printf("BLEDATA4:%s\r\n", sys.BLEDATA4);
-                }
-              }
-              if(sc_count == 5)
-              {
-                memcpy(sys.BLEDATA5,pHex+8,strlen(pHex)-8); 
-                strcat(sys.BLEDATA5,brssi);
-                if(sys.showid == 1)
-                {
-                   Serial.printf("BLEDATA5:%s\r\n", sys.BLEDATA5);
-                }
-              }
+                  for(int i=0;i<5;i++)
+                  {
+                    bledata1[i+sys.blecount] = mydata1[i];
+//                    sys.blecount++;
+                  }
+                  sys.blecount = sc_count*5;
+//                  Serial.printf("sys.blecount:%d\r\n", sys.blecount);                            
+                } 
+              }               
             }
           }
         }
@@ -239,11 +202,10 @@ void ble_data(void)
 //    }
 //    Serial.println("");
     int len = strlen(sys.BLEDATA)/45;
-    if(len < 3)
-    {
-      sys.ble_mod = 1;
-      Serial.println("*******12345");
-    }
+//    if(len < 3 &&  sys.ble_mod != 3 )
+//    {
+//      sys.ble_mod = 1;
+//    }
     if(sys.ble_mod == 0) //Find the three optimal beacons
     {
         int num2 = 0,num3 = 0;
@@ -304,11 +266,11 @@ void ble_data(void)
     {
       strncpy(bmin,&sys.BLEDATA[42],3);
       num = 0;   
-//      Serial.printf("bmin:%s\r\n", bmin);
+      Serial.printf("bmin:%s\r\n", bmin);
       for(int i =0;i<strlen(sys.BLEDATA)/45-1;i++)
       {
         strncpy(bmax,sys.BLEDATA+(45*(i+1)+42),3); 
-//        Serial.printf("bmax:%s\r\n", bmax);
+        Serial.printf("bmax:%s\r\n", bmax);
         if(strcmp(bmin,bmax)>0)
         {
           strncpy(bmin,bmax,3);
@@ -316,12 +278,29 @@ void ble_data(void)
         }
       }
       sys.ble_flag = 1;
+      memset(sys.BLEDATA1,0,sizeof(sys.BLEDATA1));
       strncpy(sys.BLEDATA1,sys.BLEDATA+(num*45),45);
       if(sys.showid == 1)
       {
         Serial.printf("BLEDATA1:%s\r\n", sys.BLEDATA1);   
       }
-    } 
+    }
+    else if(sys.ble_mod == 3) //Scan all beacons
+    {
+
+      sys.ble_flag = 1;
+      int i=0,j=0;
+      for(int i=0;i<sys.blecount;i++)
+      {
+        sys.bledata[j++]=bledata1[i];
+      }
+      if(sys.showid == 1)
+      {
+        for(int i=0;i<sys.blecount;i++)
+              Serial.printf("%.2x ",sys.bledata[i]);
+          Serial.println();   
+      }
+    }     
   }
   else if(sys.sensor_mode == 2 && sc_count == 0 )
   {
@@ -339,4 +318,22 @@ void ble_data(void)
     }
   }
   digitalWrite(2, LOW);
+}
+
+int hexToint_ble(char *str)
+{
+  int i;
+  int n = 0;
+  if(str[0] == '0' && (str[1]=='x' || str[1]=='X'))
+    i = 2;
+  else
+    i = 0;
+  for(;(str[i]>='0' && str[i]<='9') || (str[i] >='a' && str[i]<='z') || (str[i]>='A' && str[i]<='Z');i++)
+  {
+    if(tolower(str[i]) > '9')
+     n= 16*n+(10+tolower(str[i]) - 'a');
+    else
+     n= 16*n + (tolower(str[i]) -'0');
+  }
+  return n;
 }

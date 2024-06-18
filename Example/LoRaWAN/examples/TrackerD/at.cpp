@@ -1,6 +1,7 @@
 #include "at.h"
 
 static uint8_t  keep = 0;
+#define EXIT_BITMASK 0x2000000
 /**************       AT_ERROR       **************/
 ATEerror_t at_return_error(const char *param)
 {
@@ -45,11 +46,28 @@ ATEerror_t at_sleep_run(const char *param)
 {
 //  if(keep)
   Serial.println("sleep");
+  if(sys.sensor_type == 13)
+  {  
   sys.FDR_flag = 0; 
   hal_sleep();    
   sys.LORA_EnterSleepMode();
   esp_deep_sleep_start(); //DeepSleep  
+  }
+  else if(sys.sensor_type == 22)  
+  {
+    sys.FDR_flag = 0; 
+    GXHT3x_LowPower(); 
+    GPS_shutdown();
+    LMIC_shutdown();  
+    sys.LORA_EnterSleepMode();
+    esp_sleep_enable_ext1_wakeup(EXIT_BITMASK,ESP_EXT1_WAKEUP_ANY_HIGH ); //1 = High, 0 = Low  
+    rtc_gpio_isolate(GPIO_NUM_27);//mosi
+    Serial.end();      
+    gpio_reset();
+    esp_deep_sleep_start(); //DeepSleep      
+  }
   return AT_OK;
+  
 }
 
 /**************       AT_DEUI       **************/
@@ -160,6 +178,7 @@ ATEerror_t at_daddr_set(const char *param)
   uint8_t aa[4];
   StrToHex(aa,daddr,4);
   uint32_t devaddr = aa[0]<<24|aa[1]<<16|aa[2]<<8|aa[3];
+  sys.cdevaddr = aa[0]<<24|aa[1]<<16|aa[2]<<8|aa[3];
   sys.LORA_SetDevaddr(devaddr);
   return AT_OK;
 }
@@ -317,7 +336,14 @@ ATEerror_t at_model_get(const char *param)
 {
   if(keep)
     Serial.print(AT MODEL"=");
-  Serial.println(Pro_model "," Pro_version);
+      if(sys.sensor_type == 13)
+      { 
+         Serial.println(Pro_model "," Pro_version);
+      }
+      else if(sys.sensor_type == 22)
+      {
+         Serial.println(Pro_model1 "," Pro_version1);
+      } 
   return AT_OK;
 }
 
@@ -363,9 +389,20 @@ ATEerror_t at_cfg_run(const char *param)
 
 /**************       AT_PDTA      **************/
 
-ATEerror_t at_PDTA_set(const char *param)
+ATEerror_t at_pdta_set(const char *param)
 {
-  ;
+//  char mod[5]={0};
+//  memcpy(mod,param,5);
+//   Serial.printf("Latitude =%S\n\r",mod); 
+//  uint32_t page =(int)mod[0]-48;;
+//  uint32_t a =(int)mod[2]-48;
+//  uint32_t b =(int)mod[3]-48;
+//  uint32_t c =(int)mod[4]-48;
+  uint32_t pdta_addr = atoi(param);
+//  Serial.println(page);
+  Serial.println(pdta_addr);
+  sys.gps_pdta_Read(pdta_addr);
+  return AT_OK;
 }
 
 /**************       AT_TDC       **************/
@@ -425,6 +462,26 @@ ATEerror_t at_atdc_set(const char *param)
     return AT_PARAM_ERROR;
   }
   sys.atdc = atdc;
+  return AT_OK;
+}
+
+/**************       AT_ATDCONE       **************/
+ATEerror_t at_atdcone_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT ATDCONE  "=");
+  Serial.println(sys.alarm_fprt7_time);
+  return AT_OK;
+}
+ATEerror_t at_atdcone_set(const char *param)
+{
+  uint32_t atdc = atoi(param);
+
+  if(atdc > 0xFFFFFFFF)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.alarm_fprt7_time = atdc;
   return AT_OK;
 }
 
@@ -641,21 +698,25 @@ ATEerror_t at_CHE_set(const char *param)
   Serial.printf("sys.channel_single:%d\r\n",sys.channel_single); 
   return AT_OK;  
 }
-
 /**************       AT_CHS       **************/
 ATEerror_t at_CHS_get(const char *param)
 {
   if(keep)
     Serial.print(AT CHS "=");
   Serial.println(sys.fre);  
+  return AT_OK;
 }
 ATEerror_t at_CHS_set(const char *param)
 {
   uint32_t is_on = atoi(param); 
-  if(strlen(param)!=1)
-    return AT_PARAM_ERROR;   
+  if(is_on >=89)
+  {
+    return AT_PARAM_ERROR;
+  }
   sys.fre = is_on;
-  sys.customize_freq_set();
+  Serial.println("Attention:Take effect after ATZ");
+  return AT_OK; 
+//  sys.customize_freq_set();
 }
 /**************       AT_PDOP       **************/
 ATEerror_t at_PDOP_get(const char *param)
@@ -669,10 +730,10 @@ ATEerror_t at_PDOP_set(const char *param)
 {
   float pdop_value = atoi(param);
   
-  if(pdop_value > 7)
-  {
-    return AT_PARAM_ERROR;
-  }
+//  if(pdop_value > 7)
+//  {
+//    return AT_PARAM_ERROR;
+//  }
   sys.pdop_value = pdop_value;
   return AT_OK;  
 }
@@ -722,7 +783,7 @@ ATEerror_t at_eat_get(const char *param)
 {
   if(keep)
     Serial.print(AT EAT "=");
-  Serial.println(sys.exit_alarm_time/1000);
+  Serial.println(sys.exit_alarm_time);
   return AT_OK;
 }
 ATEerror_t at_eat_set(const char *param)
@@ -733,7 +794,7 @@ ATEerror_t at_eat_set(const char *param)
 //  {
 //    return AT_PARAM_ERROR;
 //  }
-  sys.exit_alarm_time = eat*1000;
+  sys.exit_alarm_time = eat;
   return AT_OK;
 }
 
@@ -912,6 +973,25 @@ ATEerror_t at_showid_set(const char *param)
   return AT_OK;
 }
 
+/**************       AT_GPS       **************/
+ATEerror_t at_gps_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT GF  "=");
+  Serial.println(sys.GPS_flag);
+  return AT_OK;
+}
+ATEerror_t at_gps_set(const char *param)
+{
+ uint8_t GPS = atoi(param);
+  if(GPS > 2)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.GPS_flag = GPS;
+  return AT_OK;
+}
+
 /**************       AT_PT       **************/
 ATEerror_t at_pt_get(const char *param)
 {
@@ -930,6 +1010,31 @@ ATEerror_t at_pt_set(const char *param)
 //  uint32_t devaddr = aa[0]<<24|aa[1]<<16|aa[2]<<8|aa[3];
 //  sys.LORA_SetDevaddr(devaddr);
   Serial.printf("%02x\r\n",sys.TF[0]);
+  return AT_OK;
+}
+
+/**************       AT_DEVICE      **************/
+ATEerror_t at_device_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT DEVICE"=");
+  Serial.printf("%d\r\n",sys.sensor_type);
+  return AT_OK;
+}
+
+ATEerror_t at_device_set(const char *param)
+{
+  uint8_t device = atoi(param);
+  sys.sensor_type = device;
+  uint8_t aa[4];
+  aa[0]=sys.LORA_GetDevaddr()>>24;
+  if(device == 13)
+  {
+    if(aa[0] == 0x01)
+    {
+      sys.cdevaddr = sys.LORA_GetDevaddr();
+    }
+  }
   return AT_OK;
 }
 /**************       ATInsPro       **************/

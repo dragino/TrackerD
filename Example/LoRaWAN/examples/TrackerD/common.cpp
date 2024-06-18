@@ -39,17 +39,35 @@ SYS::~SYS(void)
 
 int BatGet(void)
 {
+
   int   bat_i=0;
   float bat_f  =0.0;
-  float batv_f = 3.30/4095*analogRead(BAT_PIN_READ);
-  if(batv_f == 3.3)
+  float batv_f = 0.0;
+  if((sys.cdevaddr<=25692040)|| (sys.sensor_type == 13))
   {
-    bat_f = 3.46/4095*analogRead(BAT_PIN_READ);
-    bat_f = bat_f*570/470;
+    batv_f = 3.30/4095*analogRead(BAT_PIN_READ);
+    if(batv_f == 3.3)
+    {
+      bat_f = 3.46/4095*analogRead(BAT_PIN_READ);
+      bat_f = bat_f*570/470;
+    }
+    else
+    {
+      bat_f = batv_f*570/470;
+    }
   }
   else
   {
-    bat_f = batv_f*570/470;
+      batv_f = 3.30/4095*analogRead(BAT_PIN_READ1);
+      if(batv_f == 3.3)
+      {
+        bat_f = 3.46/4095*analogRead(BAT_PIN_READ1);
+        bat_f = bat_f*570/470;
+      }
+      else
+      {
+        bat_f = batv_f*570/470;
+      }
   }
 //    Serial.printf("BAT:%.2f V\r\n",bat_f);  
   bat_i = (int)(bat_f*1000);
@@ -88,12 +106,45 @@ void Stop_buzzer(void)
   }  
 }
 
+void device_strcmp(void)
+{
+  Serial.printf("sys.cdevaddr=%d\r\n",sys.cdevaddr); 
+  if((sys.cdevaddr<=25692040))
+  { 
+//    Serial.printf("button_event_init\r\n"); 
+    button_event_init();
+  }
+  else if(sys.sensor_type == 22 || (sys.cdevaddr>25692040))   
+  {   
+//    Serial.printf("button_event_init\r\n"); 
+    button_event_init1();
+  }    
+}
+
+void button_loop(void)
+{
+  if((sys.cdevaddr<=25692040))
+  {
+//    Serial.printf("button_event_init\r\n"); 
+      button_attach_loop();
+  }
+  else if(sys.sensor_type == 22 || (sys.cdevaddr>25692040))    
+  {
+//    Serial.printf("button_event_init1\r\n");   
+      button_attach_loop1();
+  }  
+
+}
+
 void gpio_reset(void)
 {
 //  gpio_reset_pin((gpio_num_t)0);
   gpio_reset_pin((gpio_num_t)2);
 //  gpio_reset_pin((gpio_num_t)4);
-  gpio_reset_pin((gpio_num_t)12);
+  if(sys.GPS_flag ==1 )
+   {
+    gpio_reset_pin((gpio_num_t)12);    
+   }
   gpio_reset_pin((gpio_num_t)13);
   gpio_reset_pin((gpio_num_t)14);
   gpio_reset_pin((gpio_num_t)15);
@@ -109,7 +160,10 @@ void gpio_reset(void)
 //  gpio_pullup_dis((gpio_num_t)0);
   gpio_pullup_dis((gpio_num_t)2);
 //  gpio_pullup_dis((gpio_num_t)4);
-  gpio_pullup_dis((gpio_num_t)12);
+  if(sys.GPS_flag ==1 )
+   {
+      gpio_pullup_dis((gpio_num_t)12);
+   }
   gpio_pullup_dis((gpio_num_t)13);
   gpio_pullup_dis((gpio_num_t)14);
   gpio_pullup_dis((gpio_num_t)15);
@@ -129,8 +183,14 @@ void Device_status()
   uint16_t version;
   
   devicet.battrey = BatGet();
-  
-  devicet.sensor_type = 0x13;   
+  if(sys.sensor_type == 13)
+  {
+    devicet.sensor_type = 0x13;
+  }
+  else if(sys.sensor_type == 22)  
+  {
+    devicet.sensor_type = 0x22;
+  } 
   
   sys.fire_version = string_touint();
 //  Serial.printf("sys.fire_version:%d\r\n",sys.fire_version);
@@ -192,7 +252,17 @@ void Device_status()
 }
 void ABP_Band_information(void)
 {
-   #if defined(CFG_eu868)
+  #if defined( CFG_us915 ) || defined( CFG_au915 )
+    // NA-US and AU channels 0-71 are configured automatically
+    // but only one group of 8 should (a subband) should be active
+    // TTN recommends the second sub band, 1 in a zero based count. 
+    // We'll disable all 72 channels used by TTN
+    for (int c = 0; c < 72; c++){
+      LMIC_disableChannel(c);
+    }
+    // We'll only enable Channel 16 (905.5Mhz) since we're transmitting on a single-channel
+    LMIC_enableChannel(sys.fre);   
+  #elif defined( CFG_eu868 )
     // Set up the channels used by the Things Network, which corresponds
     // to the defaults of most gateways. Without this, only three base
     // channels from the LoRaWAN specification are used, which certainly
@@ -202,88 +272,236 @@ void ABP_Band_information(void)
     // Setting up channels should happen after LMIC_setSession, as that
     // configures the minimal channel set. The LMIC doesn't let you change
     // the three basic settings, but we show them here.
-    LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
-    LMIC_setupChannel(1, 868300000, DR_RANGE_MAP(DR_SF12, DR_SF7B), BAND_CENTI);      // g-band
-    LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
-//    LMIC_setupChannel(3, 867100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
-//    LMIC_setupChannel(4, 867300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
-//    LMIC_setupChannel(5, 867500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
-//    LMIC_setupChannel(6, 867700000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
-//    LMIC_setupChannel(7, 867900000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
-//    LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(DR_FSK,  DR_FSK),  BAND_MILLI);      // g2-band
+    switch(sys.fre){
+      case 0:
+        LMIC_setupChannel(0, 868100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band        
+//        LMIC_disableChannel(0);
+        LMIC_disableChannel(1);
+        LMIC_disableChannel(2);
+        LMIC_disableChannel(3);
+        LMIC_disableChannel(4);
+        LMIC_disableChannel(5);
+        LMIC_disableChannel(6);
+        LMIC_disableChannel(7);
+        LMIC_disableChannel(8);         
+      break;
+      case 1:
+        LMIC_setupChannel(1, 868300000, DR_RANGE_MAP(DR_SF12, DR_SF7B), BAND_CENTI);      // g-band
+         LMIC_disableChannel(0);
+//        LMIC_disableChannel(1);
+        LMIC_disableChannel(2);
+        LMIC_disableChannel(3);
+        LMIC_disableChannel(4);
+        LMIC_disableChannel(5);
+        LMIC_disableChannel(6);
+        LMIC_disableChannel(7);
+        LMIC_disableChannel(8);         
+      break;
+      case 2:    
+        LMIC_setupChannel(2, 868500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+        LMIC_disableChannel(0);
+        LMIC_disableChannel(1);
+//        LMIC_disableChannel(2);
+        LMIC_disableChannel(3);
+        LMIC_disableChannel(4);
+        LMIC_disableChannel(5);
+        LMIC_disableChannel(6);
+        LMIC_disableChannel(7);
+        LMIC_disableChannel(8);          
+      break;
+      case 3:    
+        LMIC_setupChannel(3, 867100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+        LMIC_disableChannel(0);
+        LMIC_disableChannel(1);
+        LMIC_disableChannel(2);
+//        LMIC_disableChannel(3);
+        LMIC_disableChannel(4);
+        LMIC_disableChannel(5);
+        LMIC_disableChannel(6);
+        LMIC_disableChannel(7);
+        LMIC_disableChannel(8);         
+      break;
+      case 4:  
+        LMIC_setupChannel(4, 867300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+        LMIC_disableChannel(0);
+        LMIC_disableChannel(1);
+        LMIC_disableChannel(2);
+        LMIC_disableChannel(3);
+//        LMIC_disableChannel(4);
+        LMIC_disableChannel(5);
+        LMIC_disableChannel(6);
+        LMIC_disableChannel(7);
+        LMIC_disableChannel(8);          
+      break;
+      case 5:  
+        LMIC_setupChannel(5, 867500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+        LMIC_disableChannel(0);
+        LMIC_disableChannel(1);
+        LMIC_disableChannel(2);
+        LMIC_disableChannel(3);
+        LMIC_disableChannel(4);
+//        LMIC_disableChannel(5);
+        LMIC_disableChannel(6);
+        LMIC_disableChannel(7);
+        LMIC_disableChannel(8);          
+      break;
+      case 6:  
+        LMIC_setupChannel(6, 867700000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+        LMIC_disableChannel(0);
+        LMIC_disableChannel(1);
+        LMIC_disableChannel(2);
+        LMIC_disableChannel(3);
+        LMIC_disableChannel(4);
+        LMIC_disableChannel(5);
+//        LMIC_disableChannel(6);
+        LMIC_disableChannel(7);
+        LMIC_disableChannel(8);          
+      break;
+      case 7:  
+        LMIC_setupChannel(7, 867900000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);      // g-band
+        LMIC_disableChannel(0);
+        LMIC_disableChannel(1);
+        LMIC_disableChannel(2);
+        LMIC_disableChannel(3);
+        LMIC_disableChannel(4);
+        LMIC_disableChannel(5);
+        LMIC_disableChannel(6);
+//        LMIC_disableChannel(7);
+        LMIC_disableChannel(8);          
+      break;
+      case 8:  
+        LMIC_setupChannel(8, 868800000, DR_RANGE_MAP(DR_FSK,  DR_FSK),  BAND_MILLI);      // g2-band   
+        LMIC_disableChannel(0);
+        LMIC_disableChannel(1);
+        LMIC_disableChannel(2);
+        LMIC_disableChannel(3);
+        LMIC_disableChannel(4);
+        LMIC_disableChannel(5);
+        LMIC_disableChannel(6);
+        LMIC_disableChannel(7);
+//        LMIC_disableChannel(8);          
+      break;
+      default: 
+      break; 
+    }
     // TTN defines an additional channel at 869.525Mhz using SF9 for class B
     // devices' ping slots. LMIC does not have an easy way to define set this
     // frequency and support for class B is spotty and untested, so this
     // frequency is not configured here.
-    #elif defined(CFG_us915) || defined(CFG_au915)
-    // NA-US and AU channels 0-71 are configured automatically
-    // but only one group of 8 should (a subband) should be active
-    // TTN recommends the second sub band, 1 in a zero based count.
-    // https://github.com/TheThingsNetwork/gateway-conf/blob/master/US-global_conf.json
-    LMIC_selectSubBand(sys.channel_single);
     #elif defined(CFG_as923)
     // Set up the channels used in your country. Only two are defined by default,
     // and they cannot be changed.  Use BAND_CENTI to indicate 1% duty cycle.
-     LMIC_setupChannel(0, 923200000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
-     LMIC_setupChannel(1, 923400000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
-
+    switch(sys.fre){
+      case 0:    
+        LMIC_setupChannel(0, 923200000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
+      break;
+      case 1:         
+        LMIC_setupChannel(1, 923400000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
+      break;  
+      default: 
+      break; 
+    }
     // ... extra definitions for channels 2..n here
     #elif defined(CFG_kr920)
     // Set up the channels used in your country. Three are defined by default,
     // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
     // BAND_MILLI.
-     LMIC_setupChannel(0, 922100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(1, 922300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(2, 922500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-
+    switch(sys.fre){
+      case 0:     
+        LMIC_setupChannel(0, 922100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;
+      case 1:         
+        LMIC_setupChannel(1, 922300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;
+      case 2:         
+        LMIC_setupChannel(2, 922500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break; 
+      default: 
+      break; 
+    }
     // ... extra definitions for channels 3..n here.
     #elif defined(CFG_in866)
     // Set up the channels used in your country. Three are defined by default,
     // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
     // BAND_MILLI.
-     LMIC_setupChannel(0, 865062500, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(1, 865402500, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(2, 865985000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-
+    switch(sys.fre){
+      case 0:      
+        LMIC_setupChannel(0, 865062500, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;
+      case 1:       
+        LMIC_setupChannel(1, 865402500, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;
+      case 2:       
+        LMIC_setupChannel(2, 865985000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;      
+      default: 
+      break; 
+    }
     // ... extra definitions for channels 3..n here.
     #elif defined(CFG_kz865)
     // Set up the channels used in your country. Three are defined by default,
     // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
     // BAND_MILLI.
-     LMIC_setupChannel(0, 865100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(1, 865302500, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(2, 865585000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-
-    // ... extra definitions for channels 2..n here.
-    #elif defined(CFG_ru864)
-    // Set up the channels used in your country. Three are defined by default,
-    // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
-    // BAND_MILLI.
-     LMIC_setupChannel(0, 868900000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(1, 869100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-
-    // ... extra definitions for channels 3..n here.
+    switch(sys.fre){
+      case 0:      
+        LMIC_setupChannel(0, 865100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;
+      case 1:       
+        LMIC_setupChannel(1, 865300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;
+      case 2:       
+        LMIC_setupChannel(2, 865500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break; 
+      default: 
+      break; 
+    }
+    // ... extra definitions for channels 3..n here. 
     #elif defined(CFG_ma869)
     // Set up the channels used in your country. Three are defined by default,
     // and they cannot be changed. Duty cycle doesn't matter, but is conventionally
     // BAND_MILLI.
-     LMIC_setupChannel(0, 869100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(1, 869300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
-     LMIC_setupChannel(2, 869500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);     
+    switch(sys.fre){
+      case 0:        
+        LMIC_setupChannel(0, 869100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;
+      case 1:         
+        LMIC_setupChannel(1, 869300000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break;
+      case 2:         
+        LMIC_setupChannel(2, 869500000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_MILLI);
+      break; 
+      default: 
+      break; 
+    }
+    // ... extra definitions for channels 3..n here.
+    #elif defined(CFG_ru864)
+    // Set up the channels used in your country. Only two are defined by default,
+    // and they cannot be changed.  Use BAND_CENTI to indicate 1% duty cycle.
+    switch(sys.fre){
+      case 0:      
+        LMIC_setupChannel(0, 868900000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
+      break;
+      case 1:       
+        LMIC_setupChannel(1, 869100000, DR_RANGE_MAP(DR_SF12, DR_SF7),  BAND_CENTI);
+      break; 
+      default: 
+      break; 
+    }    
+    // ... extra definitions for channels 2..n here       
     #else
     # error Region not supported
     #endif
       
-    LMIC_setLinkCheckMode(0);
-    if(sys.LORA_GetADR() == ADR_ENABLE)
-    {
-      LMIC_setAdrMode(0);
-      LMIC_setDrTxpow(sys.LORA_GetDR(),sys.LORA_GetTXP());
-    }
-    else
-    {
-      sys.LORA_SetDR(LMIC.datarate);
-    }       
+//    LMIC_setLinkCheckMode(0);
+//    if(sys.LORA_GetADR() == ADR_ENABLE)
+//    {
+//      LMIC_setAdrMode(0);
+//      LMIC_setDrTxpow(sys.LORA_GetDR(),sys.LORA_GetTXP());
+//    }
+//    else
+//    {
+//      sys.LORA_SetDR(LMIC.datarate);
+//    }       
 }
 
 void ABP_InIt(void)
@@ -345,7 +563,14 @@ uint16_t string_touint(void)
   uint8_t chanum=0; 
   uint16_t versi;
   char version[8]="";
-  p=Pro_version;
+  if(sys.sensor_type == 13)
+  { 
+   p=Pro_version;
+  }
+  else if(sys.sensor_type == 22)
+  {
+    p=Pro_version1;
+  }
   
   while(*p++!='\0')
   {
@@ -470,8 +695,16 @@ void SYS::config_Write(void)
   addr =68;
   
   KEY.writeUChar(addr,fire_version_write);               
-  addr += sizeof(unsigned char);    
-
+  addr += sizeof(unsigned char); 
+     
+  data_8 = sensor_type;
+  KEY.writeUChar(addr, data_8);               
+  addr += sizeof(unsigned char);  
+  
+  data_32 =cdevaddr;
+  KEY.writeUInt(addr, data_32);           
+  addr += sizeof(unsigned int);
+    
 //tdc
   DATA.writeUInt(addr1, tdc);               
   addr1 += sizeof(unsigned int);
@@ -637,15 +870,20 @@ void SYS::config_Write(void)
   data_8 = njm;
   DATA.writeUChar(addr1, data_8);               
   addr1 += sizeof(unsigned char);
+
+  data_8 = GPS_flag;
+  DATA.writeUChar(addr1, data_8);               
+  addr1 += sizeof(unsigned char);
+
   if(sys.blemask_flag == 1)
   {
-    addr1 =74;
+    addr1 =75;
     for(int i=0;i<3;i++)
     {
       DATA.writeUInt(addr1, 0);          
       addr1 += sizeof(unsigned int);
     }     
-    addr1 =74;
+    addr1 =75;
     for(int i=0,j = 0;i<strlen(sys.blemask_data);i=i+4,j++)
     {
       DATA.writeUInt(addr1, s_config[config_count++]=(sys.blemask_data[i+0]<<24)|(sys.blemask_data[i+1]<<16)|(sys.blemask_data[i+2]<<8)|(sys.blemask_data[i+3]));          
@@ -656,13 +894,13 @@ void SYS::config_Write(void)
   }  
   if(sys.blemask_flag == 2)
   {
-    addr1 = 88;
+    addr1 = 89;
     for(int i=0;i<3;i++)
     {
       DATA.writeUInt(addr1, s_config1[0]=0);          
       addr1 += sizeof(unsigned int);
     }  
-    addr1 = 88;    
+    addr1 = 89;    
     for(int i=0,j = 0;i<strlen(sys.wifimask_data);i=i+4,j++)
     {   
       DATA.writeUInt(addr1, s_config1[config_count1++]=(sys.wifimask_data[i+0]<<24)|(sys.wifimask_data[i+1]<<16)|(sys.wifimask_data[i+2]<<8)|(sys.wifimask_data[i+3]));               
@@ -727,7 +965,13 @@ void SYS::config_Read(void)
   addr =68;
   fire_version_write = KEY.readUChar(addr);
   addr += sizeof(unsigned char);
-   
+
+  data_8 = KEY.readByte(addr);      
+  sensor_type = data_8;         
+  addr += sizeof(byte);
+
+  cdevaddr = KEY.readUInt(addr);
+  addr += sizeof(unsigned int);  
 //tdc
   tdc = DATA.readUInt(addr1);
   addr1 += sizeof(unsigned int);
@@ -885,6 +1129,10 @@ void SYS::config_Read(void)
   njm = data_8;         
   addr1 += sizeof(byte);
 
+  data_8 = DATA.readByte(addr1);      
+  GPS_flag = data_8;         
+  addr1 += sizeof(byte);
+
   for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
     s_config[i] = DATA.readUInt(addr1);
@@ -894,7 +1142,7 @@ void SYS::config_Read(void)
     blemask_data[j+2]= s_config[0+i]>>8;
     blemask_data[j+3]= s_config[0+i];
   } 
-  addr1 = 88;
+  addr1 = 89;
   for(uint8_t i=0,j = 0;i<3;i++,j=j+4)
   {
     s_config1[i] = DATA.readUInt(addr1);
@@ -907,40 +1155,116 @@ void SYS::config_Read(void)
 }
 
 void SYS::gps_data_Weite(void)
-{  
-  if(addr_gps_write >= 4095)
+{
+  if(sys.sensor_type == 13)
   {
-   gps_write = 4095;
-   addr_gps_write = 0; 
-  }
+    if(addr_gps_write >= 4095)
+    {
+     gps_write = 4095;
+     addr_gps_write = 0; 
+    }
    if(addr_gps_write <= 4095)
-   {
-      for(uint8_t i=0;i<15;i++)
-      {
-        GPSDATA.writeUChar(addr_gps_write, sys.gps_data_buff[i]);               
-        addr_gps_write += sizeof(unsigned char);
-      }         
-      sys.config_Write();
-      GPSDATA.commit();  
-   } 
+    {
+        for(uint8_t i=0;i<15;i++)
+        {
+          GPSDATA.writeUChar(addr_gps_write, sys.gps_data_buff[i]);               
+          addr_gps_write += sizeof(unsigned char);
+        }         
+        sys.config_Write();
+        GPSDATA.commit();  
+    } 
+  }
+  else if(sys.sensor_type == 22)  
+  {
+    if(addr_gps_write >= 4080)
+    {
+     gps_write = 4080;
+     addr_gps_write = 0; 
+    }
+   if(addr_gps_write <= 4080)
+    {
+        for(uint8_t i=0;i<17;i++)
+        {
+          GPSDATA.writeUChar(addr_gps_write, sys.gps_data_buff[i]);               
+          addr_gps_write += sizeof(unsigned char);
+        }         
+        sys.config_Write();
+        GPSDATA.commit();  
+    } 
+  } 
+      
+
 }
 
 void SYS::gps_data_Read(void)
 {
-  for(uint8_t i=0;i<15;i++)
+  if(sys.sensor_type == 13)
   {
-    sys.gps_data_buff[i] = GPSDATA.readUChar(addr_gps_read);
-    addr_gps_read += sizeof(unsigned char);
+    for(uint8_t i=0;i<15;i++)
+    {
+      sys.gps_data_buff[i] = GPSDATA.readUChar(addr_gps_read);
+      addr_gps_read += sizeof(unsigned char);
+    }
   }
+  else  if(sys.sensor_type == 22)
+  {
+    for(uint8_t i=0;i<17;i++)
+    {
+      sys.gps_data_buff[i] = GPSDATA.readUChar(addr_gps_read);
+      addr_gps_read += sizeof(unsigned char);
+    }    
+  }
+}
+
+
+void SYS::gps_pdta_Read(uint32_t pdta_addr)
+{
+  for(uint32_t i=0;i<pdta_addr;i++)
+  {
+    if(sys.sensor_type == 13)
+    {
+      for(uint8_t i=0;i<15;i++)
+      {
+        sys.gps_data_buff[i] = GPSDATA.readUChar(addr_pdta_read);
+        addr_pdta_read += sizeof(unsigned char);
+      }
+       for(int i=0;i<15;i++)
+          Serial.printf("%.2x ",sys.gps_data_buff[i]);
+      Serial.println();     
+    }
+    else  if(sys.sensor_type == 22)
+    {
+      for(uint8_t i=0;i<17;i++)
+      {
+        sys.gps_data_buff[i] = GPSDATA.readUChar(addr_pdta_read);
+        addr_pdta_read += sizeof(unsigned char);
+        addr_gps_read =0;
+      }
+       for(int i=0;i<17;i++)
+          Serial.printf("%.2x ",sys.gps_data_buff[i]);
+      Serial.println(); 
+      Serial.printf("addr_pdta_read:%d\r\n",sys.addr_pdta_read);          
+    }
+  }
+  addr_pdta_read =0; 
 }
 
 void SYS::read_gps_data_on_flash()
 {
   gps_data_Read();
-  Serial.print("GPS DATA:"); 
-  for(int i=0;i<15;i++)
-      Serial.printf("%.2x ",sys.gps_data_buff[i]);
-  Serial.println();
+  Serial.print("GPS DATA:");
+ if(sys.sensor_type == 13)
+ {  
+    for(int i=0;i<15;i++)
+        Serial.printf("%.2x ",sys.gps_data_buff[i]);
+    Serial.println();
+ }
+ else if(sys.sensor_type == 22)
+ {
+    for(int i=0;i<17;i++)
+        Serial.printf("%.2x ",sys.gps_data_buff[i]);
+    Serial.println();  
+ }
 }
 
 void SYS::GPSDATA_CLEAR(void)

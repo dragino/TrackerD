@@ -45,6 +45,10 @@
 #define BG            "+BG"
 #define BEEP          "+BEEP"
 #define EAT           "+EAT"
+#define GF            "+GF"
+#define ATDCONE       "+ATDCONE"
+#define DEVICE        "+DEVICE"
+#define PDTA          "+PDTA"
 typedef enum
 {
   AT_OK = 0,
@@ -122,6 +126,8 @@ ATEerror_t at_intwk_get(const char *param);
 ATEerror_t at_intwk_set(const char *param);
 ATEerror_t at_lon_get(const char *param);
 ATEerror_t at_lon_set(const char *param);
+ATEerror_t at_CHS_get(const char *param);
+ATEerror_t at_CHS_set(const char *param);
 ATEerror_t at_CHE_get(const char *param);
 ATEerror_t at_CHE_set(const char *param);
 ATEerror_t at_cfm_get(const char *param);
@@ -157,6 +163,13 @@ ATEerror_t at_beep_get(const char *param);
 ATEerror_t at_beep_set(const char *param);
 ATEerror_t at_eat_get(const char *param);
 ATEerror_t at_eat_set(const char *param);
+ATEerror_t at_gps_get(const char *param);
+ATEerror_t at_gps_set(const char *param);
+ATEerror_t at_atdcone_get(const char *param);
+ATEerror_t at_atdcone_set(const char *param);
+ATEerror_t at_device_get(const char *param);
+ATEerror_t at_device_set(const char *param);
+ATEerror_t at_pdta_set(const char *param);
 static const struct ATCommand_s ATCommand[] =
 {
 /**************** AT+MODEL ****************/  
@@ -413,6 +426,17 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_CHE_set,
     .run = at_return_error,
   },
+ /**************** AT+CHS ****************/  
+  {
+    .string = AT CHS,
+    .size_string = sizeof(CHS) - 1,
+#ifndef NO_HELP
+    .help_string = AT CHS "     : Enable/Disable LED activity for uplink",
+#endif
+    .get = at_CHS_get,
+    .set = at_CHS_set,
+    .run = at_return_error,
+  }, 
 /**************** AT+NMEA353 ****************/  
   {
     .string = AT NMEA353,
@@ -596,7 +620,44 @@ static const struct ATCommand_s ATCommand[] =
     .get = at_eat_get,
     .set = at_eat_set,
     .run = at_return_error,
+  },
+
+/**************** AT+GF ****************/  
+  {
+    .string = AT GF,
+    .size_string = sizeof(GF) - 1,
+#ifndef NO_HELP
+    .help_string = AT GF "     : Get or Set The GSP was enabled or disabled",
+#endif
+    .get = at_gps_get,
+    .set = at_gps_set,
+    .run = at_return_error,
+  },   
+
+/**************** AT+DEVICE ****************/  
+  {
+    .string = AT DEVICE,
+    .size_string = sizeof(DEVICE) - 1,
+#ifndef NO_HELP
+    .help_string = AT DEVICE "     : ",
+#endif
+    .get = at_device_get,
+    .set = at_device_set,
+    .run = at_return_error,
+  },
+
+///**************** AT+PDTA ****************/  
+  {
+    .string = AT PDTA,
+    .size_string = sizeof(PDTA) - 1,
+#ifndef NO_HELP
+    .help_string = AT PDTA "     : Reset Parameters to Factory Default",
+#endif
+   .get = at_return_error,
+   .set = at_pdta_set,
+   .run = at_return_error,
   },    
+          
 };
 
 ATEerror_t ATInsPro(char* atdata);
