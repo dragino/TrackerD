@@ -100,8 +100,9 @@ bool GPS_DATA(void)
             sensor.longitude = (int)(longitude*1000000);
             longitiude_string = String(sensor.longitude);
 
+	    //
+	    // Altitude and HDOP for ttnmapper mode
 	    sensor.altitude = gps.altitude.meters();
-
 	    sensor.hdop_gps = (int)sensor.pdop_gps * 10;
 	    
             Serial.printf("Latitude = %0.6f\n\r",latitude);

@@ -789,6 +789,8 @@ void do_send(osjob_t* j)
             mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4) |(sys.ble_gps<<3)) & 0xFF;         
           }
 	  else if(sys.mod == 2)
+	    //
+	    // Mode for uploading data for ttnmapper.org, sends lat,long,altitude and HDOP.
           {
 	    sys.port = 10;
             mydata[i++] = (sensor.altitude>>8) & 0xFF;
