@@ -778,7 +778,7 @@ void do_send(osjob_t* j)
               mydata[i++] = (sensor.hum>>8) & 0xFF;
               mydata[i++] = (sensor.hum)    & 0xFF;
               mydata[i++] = (sensor.tem>>8) & 0xFF;
-              mydata[i++] = (sensor.tem)    & 0xFF; 
+              mydata[i++] = (sensor.tem)    & 0xFF;
             }            
           }
           else if(sys.mod == 1)
@@ -787,6 +787,16 @@ void do_send(osjob_t* j)
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
             mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4) |(sys.ble_gps<<3)) & 0xFF;         
+          }
+	  else if(sys.mod == 2)
+          {
+	    sys.port = 10;
+            mydata[i++] = (sensor.altitude>>8) & 0xFF;
+            mydata[i++] = (sensor.altitude)    & 0xFF;
+	    mydata[i++] = (sensor.hdop_gps)    & 0xFF;
+            mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
+            mydata[i++] = (sensor.bat) & 0xFF;
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4) |(sys.ble_gps<<3)) & 0xFF;
           }
           if(sys.ble_gps == 1) 
           {

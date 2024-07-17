@@ -99,7 +99,11 @@ bool GPS_DATA(void)
             longitude = gps.location.lng();
             sensor.longitude = (int)(longitude*1000000);
             longitiude_string = String(sensor.longitude);
-            
+
+	    sensor.altitude = gps.altitude.meters();
+
+	    sensor.hdop_gps = (int)sensor.pdop_gps * 10;
+	    
             Serial.printf("Latitude = %0.6f\n\r",latitude);
             Serial.printf("Longitude = %0.6f\n\r",longitude);
             Serial.printf("Date: %d-%d-%d\n\r",sensor.year_gps,sensor.month_gps,sensor.day_gps);
