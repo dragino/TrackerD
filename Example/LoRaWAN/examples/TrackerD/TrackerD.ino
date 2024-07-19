@@ -708,6 +708,13 @@ void do_send(osjob_t* j)
           bg_mode =1; 
         }
       }
+      //
+      // If the device is in TTN Mapper mode, we disable the log gps feature
+      // as it could result in invalid date being sent to TTN Mapper
+      if (sys.mod == 2)
+      {
+	sys.loggpsdata = 0;
+      }
       if(sys.loggpsdata_send == 1)
       {
         sys.port = 4;
