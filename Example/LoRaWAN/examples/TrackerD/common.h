@@ -162,6 +162,8 @@ class Sensor
     int bat=0;
     int latitude=0;
     int longitude=0;
+    int altitude=0;
+    int hdop_gps=0;
     int year_gps = 0;
     int month_gps = 0;
     int day_gps = 0;
