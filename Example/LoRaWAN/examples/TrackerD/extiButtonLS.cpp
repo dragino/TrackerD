@@ -14,6 +14,7 @@ unsigned long ALARM_STOP1 = 0UL;
 unsigned long ALARM_TIME1 = 0UL;
 uint8_t operate_flag1 =0;
 uint8_t button_count1 = 0;
+uint8_t LongPress1=0;
 #define EXIT_PIN_BITMASK 0x2000000
 LIS3DH myIMU2(0x19); //Default address is 0x19.
 // key event callback function
@@ -43,6 +44,7 @@ void attachDuringLongPress1()
   if(sys.sensor_type == 13)
   {      
     sys.sleep_flag = 1;
+    LongPress1 =1;
     if(sys.lon == 1)
     {    
         digitalWrite(LED_PIN_GREEN, HIGH);
@@ -52,6 +54,7 @@ void attachDuringLongPress1()
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 0;
       sys.alarm = 1;
+      LongPress1 =0;
       if(sys.lon == 1)
       {
         digitalWrite(LED_PIN_RED1, HIGH);
@@ -63,6 +66,7 @@ void attachDuringLongPress1()
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 1;
 //      operate_flag = 1;
+      LongPress1 =0;
       if(sys.lon == 1)
       {
         digitalWrite(LED_PIN_RED1, HIGH);
@@ -79,14 +83,15 @@ void attachDuringLongPress1()
         digitalWrite(LED_PIN_RED1, HIGH); 
      }
      sys.sleep_flag = 0;
-     if(operate_flag1 == 1)
-     {
+     LongPress1 =0;
+//     if(operate_flag1 == 1)
+//     {
         sys.exit_off =0;
         sys.alarm = 1;
         alarm(); 
         operate_flag1 = 0;
         sys.sleep_flag = 2;  
-     }
+//     }
     }
   }
   else if(sys.sensor_type == 22)
@@ -127,19 +132,36 @@ void attachLongPressStop1()
       alarm1();  
     }
     else if (sys.sleep_flag == 1)
-    {
+   {
      digitalWrite(LED_PIN_RED1, LOW);
      digitalWrite(LED_PIN_BLUE1, LOW);
      operate_flag1 = 1;
 //     sys.alarm = 1;
      sys.sleep_flag = 1;
+    if(LongPress1 == 1)
+     {
+        sys.gps_alarm = 0;
+        sys.gps_start = 2;
+        sys.alarm = 0;
+        LongPress1 =0;
+        sys.keep_flag = 0;
+        sys.alarm_count =0;        
+        sys.exti_flag = 2;
+        operate_flag1 = 0;
+//        sys.gps_alarm = 1;
+//        sys.alarm = 1;
+//        sys.exti_flag = 1;
+        sys.buzzer_flag = 0;
+        sys.alarm_no = 1;  
+        myIMU2.imu_power_down();     
+       sys.exti_flag = 2;
+     }     
     }
   }
   else if(sys.sensor_type == 22)
   {
     ALARM_STOP1= millis();
     ALARM_TIME1 =  ALARM_STOP1- ALARM_START1;
-    Serial.println("attach Long Press Stop1");
     if(sys.sleep_flag == 1)               //Press three times to enter the alarm state
     {
       digitalWrite(LED_PIN_BLUE1, LOW);
@@ -215,12 +237,19 @@ void attachMultiClick1()
         break;
       }
       default:{
+        sys.gps_alarm = 0;
+        sys.gps_start = 2;
+        sys.alarm = 0;
+        sys.keep_flag = 0;
+        sys.alarm_count =0;        
+        sys.exti_flag = 2;
+        operate_flag1 = 0;
 //        sys.gps_alarm = 1;
 //        sys.alarm = 1;
 //        sys.exti_flag = 1;
-//        sys.buzzer_flag = 0;
-//        sys.alarm_no = 1;  
-//        myIMU1.imu_power_down();   
+        sys.buzzer_flag = 0;
+        sys.alarm_no = 1;  
+        myIMU2.imu_power_down();    
         Serial.printf("switch:%d\r\n",button1.getNumberClicks());break;}
     }
   }

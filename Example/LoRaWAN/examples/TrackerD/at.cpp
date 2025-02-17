@@ -168,6 +168,7 @@ ATEerror_t at_daddr_get(const char *param)
   if(keep)
     Serial.print(AT DADDR"=");
   Serial.printf("%08x\r\n",sys.LORA_GetDevaddr());
+  Serial.printf("Static=%08x\r\n",sys.cdevaddr);
   return AT_OK;
 }
 
@@ -422,6 +423,25 @@ ATEerror_t at_tdc_set(const char *param)
   }
   sys.tdc = tdc;
   sys.sys_time = tdc;
+  return AT_OK;
+}
+
+/**************       AT_TDC       **************/
+ATEerror_t at_ble_tdc_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT BTDC "=");
+  Serial.println(sys.ble_tdc);
+  return AT_OK;
+}
+ATEerror_t at_ble_tdc_set(const char *param)
+{
+  uint32_t ble_tdc = atoi(param);
+  if( ble_tdc==0)
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.ble_tdc = ble_tdc;
   return AT_OK;
 }
 

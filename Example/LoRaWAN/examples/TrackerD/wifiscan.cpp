@@ -87,6 +87,10 @@ void wifi_scan(void)
           strcat(buff_test,WRSSI);
           strcat(WIFIData,buff_test);
           wifi_count = 1;
+          sys.exti_flag=1;
+//          Serial.printf("sys.ble_mod:%d\r\n", sys.ble_mod);
+//          Serial.printf("wifi_count:%d\r\n", wifi_count);
+//          Serial.printf("sys.exti_flag:%d\r\n", sys.exti_flag);
         }
         else if((strlen(sys.wifimask_data)<6 ||( sys.wifimask_data[0] == '0' && sys.wifimask_data[1] == '0' & sys.wifimask_data[2] == '0' & sys.wifimask_data[3] == '0' & sys.wifimask_data[4] == '0' & sys.wifimask_data[5] == '0'))&& wrssi >= -90)
         {
@@ -105,14 +109,14 @@ void wifi_scan(void)
           if(strlen(str)>6)
           {
             strncpy(WSSID,str+(strlen(str)-6),6);
-    //        Serial.printf("%s\r\n",WSSID);
+//            Serial.printf("%s\r\n",WSSID);
           }
           if(strlen(str)<=6)
           {
             strncpy(Cssid,str,6);
             strcat(Cssid,addSSID);
             strncpy(WSSID,Cssid,6);
-    //        Serial.printf("%s\r\n", WSSID);
+//            Serial.printf("%s\r\n", WSSID);
           }           
           strcat(sys.databuf,WSSID);
           int wrssi = WiFi.RSSI(0);

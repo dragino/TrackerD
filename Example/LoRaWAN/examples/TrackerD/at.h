@@ -49,6 +49,7 @@
 #define ATDCONE       "+ATDCONE"
 #define DEVICE        "+DEVICE"
 #define PDTA          "+PDTA"
+#define BTDC          "+BTDC"
 typedef enum
 {
   AT_OK = 0,
@@ -95,6 +96,8 @@ ATEerror_t at_sleep_run(const char *param);
 ATEerror_t at_cfg_run(const char *param);
 ATEerror_t at_tdc_get(const char *param);
 ATEerror_t at_tdc_set(const char *param);
+ATEerror_t at_ble_tdc_get(const char *param);
+ATEerror_t at_ble_tdc_set(const char *param);
 ATEerror_t at_mtdc_get(const char *param);
 ATEerror_t at_mtdc_set(const char *param);
 ATEerror_t at_atdc_get(const char *param);
@@ -657,7 +660,17 @@ static const struct ATCommand_s ATCommand[] =
    .set = at_pdta_set,
    .run = at_return_error,
   },    
-          
+//**************** AT+BTDC ****************/  
+  {
+    .string = AT BTDC,
+    .size_string = sizeof(BTDC) - 1,
+#ifndef NO_HELP
+    .help_string = AT BTDC "     : Reset Parameters to Factory Default",
+#endif
+   .get = at_ble_tdc_get,
+   .set = at_ble_tdc_set,
+   .run = at_return_error,
+  },          
 };
 
 ATEerror_t ATInsPro(char* atdata);

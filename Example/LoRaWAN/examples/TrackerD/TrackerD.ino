@@ -708,13 +708,6 @@ void do_send(osjob_t* j)
           bg_mode =1; 
         }
       }
-      //
-      // If the device is in TTN Mapper mode, we disable the log gps feature
-      // as it could result in invalid date being sent to TTN Mapper
-      if (sys.mod == 2)
-      {
-	sys.loggpsdata = 0;
-      }
       if(sys.loggpsdata_send == 1)
       {
         sys.port = 4;
@@ -777,16 +770,16 @@ void do_send(osjob_t* j)
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
             mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4)|(sys.ble_gps<<3)) & 0xFF; 
-            if(sys.ble_gps == 0)
-            {
+//            if(sys.ble_gps == 0)
+//            {
               GXHT3x_GetData();
               sensor.hum = (int)(GXHT3x_GetHum()*10);
               sensor.tem = (int)(GXHT3x_GetTem()*10); 
               mydata[i++] = (sensor.hum>>8) & 0xFF;
               mydata[i++] = (sensor.hum)    & 0xFF;
               mydata[i++] = (sensor.tem>>8) & 0xFF;
-              mydata[i++] = (sensor.tem)    & 0xFF;
-            }            
+              mydata[i++] = (sensor.tem)    & 0xFF; 
+//            }            
           }
           else if(sys.mod == 1)
           {
@@ -795,18 +788,22 @@ void do_send(osjob_t* j)
             mydata[i++] = (sensor.bat) & 0xFF;
             mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4) |(sys.ble_gps<<3)) & 0xFF;         
           }
-	  else if(sys.mod == 2)
-	    //
-	    // Mode for uploading data for ttnmapper.org, sends lat,long,altitude and HDOP.
+          else if(sys.mod == 2)
           {
-	    sys.port = 10;
-            mydata[i++] = (sensor.altitude>>8) & 0xFF;
-            mydata[i++] = (sensor.altitude)    & 0xFF;
-	    mydata[i++] = (sensor.hdop_gps)    & 0xFF;
+            sys.port = 3;
             mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
             mydata[i++] = (sensor.bat) & 0xFF;
-            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4) |(sys.ble_gps<<3)) & 0xFF;
-          }
+            mydata[i++] = ((sys.mod<<6) | (sys.lon<<5)|(intwk_flag<<4) |(sys.ble_gps<<3)) & 0xFF;    
+            mydata[i++] = (sensor.fmps>>8) & 0xFF;
+            mydata[i++] = (sensor.fmps)    & 0xFF;  
+            GXHT3x_GetData();
+            sensor.hum = (int)(GXHT3x_GetHum()*10);
+            sensor.tem = (int)(GXHT3x_GetTem()*10); 
+            mydata[i++] = (sensor.hum>>8) & 0xFF;
+            mydata[i++] = (sensor.hum)    & 0xFF;
+            mydata[i++] = (sensor.tem>>8) & 0xFF;
+            mydata[i++] = (sensor.tem)    & 0xFF;                            
+          }          
           if(sys.ble_gps == 1) 
           {
             mydata[i++] = (sensor.year_gps>>8)   & 0xFF;
@@ -826,7 +823,7 @@ void do_send(osjob_t* j)
         {
           if(sys.ble_mod  == 0)
           {      
-            ;                  
+            ;                 
           }
           else if(sys.ble_mod  == 1)
           {
@@ -905,7 +902,106 @@ void do_send(osjob_t* j)
 //               Serial.printf("%.2x ",mydata[a]);
 //            Serial.println();             
                                                
-          }          
+          }
+         else if(sys.ble_mod  == 4)
+          {
+            sys.port = 10;
+            if(sys.ble_gps == 1)
+            {
+              bg_mode = 1; 
+              if(sys.ble_gps == 1&& button_Count != 0)
+              {
+                turn_interrupts = 1;             
+              }
+              bg_mode = 1; 
+              bg_flag = 0; 
+            }         
+            char bleuuidmajorminjor[12]={0},bleuuidmajorminjor1[12]={0},bleuuidmajorminjor2[12]={0};
+            char blerssi[4],blerssi1[4],blerssi2[4];
+            uint8_t mydata2[7] = {0},mydata3[7] = {0},mydata4[7] = {0};
+            for(int a=12; a<strlen(sys.BLEDATA1); a++)
+            {
+              blerssi[a-12] = sys.BLEDATA1[a];
+            } 
+            for(int a=0;a<(strlen(sys.BLEDATA2))-3;a++)
+            {
+              bleuuidmajorminjor1[a] = sys.BLEDATA2[a];
+            }
+            for(int a=12; a<strlen(sys.BLEDATA2); a++)
+            {
+              blerssi1[a-12] = sys.BLEDATA2[a];
+            }
+//             Serial.printf("BLEDATA3 length:%d\r\n", strlen(sys.BLEDATA3)); 
+//             Serial.printf("BLEDATA4 length:%d\r\n", strlen(sys.BLEDATA4));             
+            for(int a=0;a<(strlen(sys.BLEDATA4))-3;a++)
+            {
+              bleuuidmajorminjor2[a] = sys.BLEDATA4[a];
+            }
+            for(int a=12; a<strlen(sys.BLEDATA4); a++)
+            {
+              blerssi2[a-12] = sys.BLEDATA4[a];
+            }                               
+            int x=0;            
+            for(int j=0;x<(strlen(bleuuidmajorminjor1)/4)+3;x++,j++)
+            {
+              char str[5] = {0};
+              memcpy(str,bleuuidmajorminjor1+x*4,4);
+              int num = hexToint(str);
+              mydata3[j*2] = num>>8;
+              mydata3[j*2+1] = num; 
+            }
+            String brssi1 = blerssi1;
+            int num1 = brssi1.toInt();  
+//           for(int i=0;i<6;i++)
+//                  Serial.printf("%.2x",mydata3[i]);
+//              Serial.println();
+            int c =0;             
+            for(int j=0; c<(strlen(bleuuidmajorminjor2)/4)+3;c++,j++)
+            {
+              char str[5] = {0};
+              memcpy(str,bleuuidmajorminjor2+c*4,4);
+              int num = hexToint(str);
+              mydata4[j*2] = num>>8;
+              mydata4[j*2+1] = num; 
+            }
+            String brssi2 = blerssi2;
+            int num2 = brssi2.toInt(); 
+//           for(int i=0;i<6;i++)
+//                  Serial.printf("%.2x",mydata4[i]);
+//              Serial.println();   
+            for(int j=0;i<(strlen(sys.BLEDATA1)/4)+3;i++,j++)
+            {
+              char str[5] = {0};
+              memcpy(str,sys.BLEDATA1+i*4,4);
+              int num = hexToint(str);
+              mydata[j*2] = num>>8;
+              mydata[j*2+1] = num; 
+            } 
+            String brssi = blerssi;
+            int num = brssi.toInt();  
+            mydata[i++] = num; 
+//            Serial.printf("%2x\r\n",num); 
+//            Serial.printf("%2x\r\n",num1);
+//            Serial.printf("%2x\r\n",num2);   
+            for(int a=0;a<6;a++)
+            {
+               mydata[i++]=mydata3[a]; 
+//               Serial.printf("%.2x",mydata3[a]);                                                             
+            }
+//            Serial.println();
+            mydata[i++]=num1; 
+            for(int a=0;a<6;a++)
+            {
+               mydata[i++]=mydata4[a];                                                              
+            }
+            mydata[i++]=num2;            
+            mydata[i++] = ((sys.alarm<<6) | (sensor.bat>>8)) & 0xFF;
+            mydata[i++] = (sensor.bat) & 0xFF;
+            mydata[i++] = ((sys.ble_mod<<5) | (sys.lon<<4)|(intwk_flag<<3)) & 0xFF;  
+//           for(int i=0;i<24;i++)
+//                  Serial.printf("%x",mydata[i]);
+//              Serial.println();                                                        
+          }                    
         }
       }        
       LMIC_setTxData2(sys.port, mydata, i, sys.frame_flag);
@@ -1061,6 +1157,7 @@ static void print_wakeup_reason()
         }
         else
         {
+          Serial.printf("sys.fall_detection:%d\r\n",sys.fall_detection);         
           sys.gps_start = 0;  
           button_Count1 =0;
           sys.exti_flag = 2;  
@@ -1074,14 +1171,18 @@ static void print_wakeup_reason()
         sys.alarm = 1;
         sys.exti_flag = 1;
         sys.buzzer_flag = 1;
-        sys.alarm_no = 1;        
+        sys.alarm_no = 1;         
       }
     break;
     case ESP_SLEEP_WAKEUP_EXT1 : 
 //      gpio_deep_sleep_hold_dis();
       sys.gps_start = 0;
       sys.exti_flag = 0;
-      sys.sleep_exti =0;
+//      alarm();
+//      if(sys.sensor_type != 22)
+//      {
+//        sys.sleep_exti =0;
+//      }
       EXIT_flag = 1;
       sport_mod =0;
       DFR =0; 
@@ -1108,23 +1209,9 @@ static void print_wakeup_reason()
     if(sys.pedometer == 1)
     { 
       sys.tdc = sys.sys_time;
-      if(sys.tdc <= 4200000)
-      {
-        Pedometer_Count = 0;
-      }
-      else if(EXIT_flag != 1 && button_Count1 == 0 &&  sys.tdc >= 4200000)
-      {
-        if(TDC_Count !=0 )
-        {
-         Pedometer_Count = 0;
-        }
-        if(TDC_Time <= 3600000 )
-        {
-         Pedometer_Count = 0;
-//         Serial.println("TDC_Time <= 3600000"); 
-        }  
-      }
+      Pedometer_Count = 0; 
     }
+//    sys.sleep_exti =0;
 //    gpio_hold_dis((gpio_num_t)12);
 //    gpio_deep_sleep_hold_dis();
     Serial.println("Wakeup caused by timer");
@@ -1132,16 +1219,29 @@ static void print_wakeup_reason()
     case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
     case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
     default :
-      Serial.printf("Wakeup was not caused by deep sleep: %d\r\n",wakeup_reason); 
+      Serial.printf("Wakeup was not caused by deep sleep: %d\r\n",wakeup_reason);
+      if(sys.cdevaddr == 4294967295) 
+      {
+        sys.cdevaddr=sys.LORA_GetDevaddr();
+        sys.config_Write();
+      }
+//      sys.cdevaddr=25692040;
+      
       sys.config_Read();
       sys.gps_alarm = 0;
       sys.gps_start = 1;
       sys.exit_off = 1;
+      sys.sleep_exti =0;
       sys.alarm = 0;
       sys.alarm_count =0;
       os_JOINED_flag = 1;
       TDC_Time = sys.sys_time;
       TDC_Count = 0;
+      if(sys.ble_tdc ==0 || sys.ble_tdc ==255)
+      {
+        sys.ble_tdc=5;
+      }
+//      sys.sensor_type = 22;
       if(sys.sensor_type == 13)
       { 
          Serial.println(Pro_model "," Pro_version);
@@ -1200,7 +1300,7 @@ static void print_wakeup_reason()
         sys.Positioning_time = 180000;
         sys.exit_alarm_time =2000;
         sys.beep_flag =0;
-//        sys.sensor_type =22;
+//        sys.sensor_type =13;
         sys.TF[0] ={0x14};    
       }
       sys.tdc = sys.sys_time;    
@@ -1290,22 +1390,6 @@ void setup() {
       Serial.printf("datalog count:%d\r\n",sys.addr_gps_write/17);
     } 
   }
-  if(EXIT_flag != 1 && button_Count1 == 0 &&  sys.tdc >= 4200000 && sys.gps_alarm == 0)
-  {
-    if(TDC_Count !=0 )
-    {
-      Serial.printf("TDC_Count:%d\r\n",TDC_Count); 
-      sys.gps_start = 3;
-      sys.exti_flag = 2;
-      sport_Count = 0;
-    }
-    if(TDC_Time <= 3600000 )
-    {
-      sys.gps_start = 2;
-      sys.exti_flag = 4;
-      interrupts_flag= 0;
-    }  
-  }
   if(sport_mod== 0)
   {
     if(sys.Intwk == 1)
@@ -1332,13 +1416,25 @@ void setup() {
   {
     sys.sensor_mode = 2; 
   }
-  if(sensor.bat<2800 && sys.sensor_mode == 1)
+  if(sensor.bat<2800 && sys.sensor_type == 22)
+  {
+    sys.gps_start = 0;  
+    button_Count1 =0;
+    sys.exti_flag = 2;
+    sys.tdc = 18000000;  
+  }
+  if(sys.gps_start == 0 && sensor.bat>3500)  
+  {
+    sys.gps_start = 2;
+    sys.tdc = sys.sys_time;
+  }
+  if(sensor.bat<2800 && sys.sensor_mode == 1 && sys.sensor_type == 13)
   {
     sys.gps_work_flag = false;
     sensor.latitude  = 0xFFFFFFFF;
     sensor.longitude = 0xFFFFFFFF;
     Serial.println("Low voltage,do not start GPS");
-  }  
+  }   
   else if(sys.gps_start == 2 && sys.loggpsdata_send == 0 && interrupts_flag == 0)
   {
     if(sys.sensor_mode == 1 && bg_mode== 1)
@@ -1360,7 +1456,7 @@ void setup() {
     {
       if(sys.sensor_mode == 2 || bg_mode == 2)
       {      
-        if(sys.ble_mod == 1) 
+        if(sys.ble_mod == 0 || sys.ble_mod == 1 || sys.ble_mod == 3) 
         {  
           Serial.println("Start searching for BLE..."); 
         }
@@ -1373,7 +1469,7 @@ void setup() {
       {
        Serial.println("Enable ble and gps hybrid mode"); 
       }
-      if(sys.ble_mod == 0||sys.ble_mod == 1||sys.ble_mod == 3) 
+      if(sys.ble_mod == 0||sys.ble_mod == 1||sys.ble_mod == 3||sys.ble_mod == 4) 
       {       
         ble_init();
         ble_run();
@@ -1435,7 +1531,7 @@ void loop() {
         {
            sys.keep_flag = 0;
            sys.exti_flag = 2;
-           uint32_t ss =TDC_Time-sys.mtdc;
+           uint32_t ss =sys.tdc-sys.mtdc;
            if(sport_Count == 0)
            {
              if(TDC_Time <= sys.mtdc)
@@ -1448,25 +1544,16 @@ void loop() {
              {
                if(ss <20000)
                {
-                 sys.tdc = ss;
+                if(ss > 0)
+                {
+                  sys.tdc = ss;
+                }   
                  LIS3DH_configIntterupts();
                }
                else
                {
-                  TDC_Time = sys.sys_time;
-//                  tdc_time();
-                  if(sys.tdc >=4200000)
-                  {
-                    sys.tdc = 3600000-sys.mtdc-10000;
-                    sys.gps_start = 3;
-                    sys.exti_flag = 2;                    
-                  }
-                  else
-                  {
-                    sys.tdc = sys.tdc-sys.mtdc-10000;
-                  }
-                  TDC_Count ++;
-                  LIS3DH_configIntterupts();
+                 sys.tdc = sys.tdc-sys.mtdc-10000;
+                 LIS3DH_configIntterupts();
                }
                sport_Count = 1;
                button_Count1 = 0;
@@ -1523,45 +1610,6 @@ void gps_send(void)
   if(os_run_flag == true)
       os_runloop_once();  
 }
-
-void tdc_time(void)
-{
-  uint8_t TDC_Flag = sys.sys_time/3600000;
-  if(TDC_Flag>0)
-  {  
-    if(TDC_Time <= 3600000)
-    {
-      sys.exti_flag = 3;
-      TDC_Count = 0;   
-      if(TDC_Count == 0)
-      {
-        sys.tdc = TDC_Time;  
-      }
-      TDC_Time = sys.sys_time;              
-    }
-    else
-    {
-      if(TDC_Count == 0)
-      {
-        sys.tdc = 3600000;
-      }
-      else
-      {
-        sys.tdc = 3600000-3000;
-        TDC_Time = TDC_Time -3600000; 
-        if(TDC_Time <= 3600000 )
-        {
-          sys.gps_start = 2 ;
-          TDC_Count = 0; 
-          sys.tdc =TDC_Time;
-        }
-      }
-      Serial.printf("TDC:%d\r\n",sys.tdc );   
-      Serial.printf("TDC_Time:%d\r\n",TDC_Time); 
-    }
-  }
-}
-
 void device_start(void)
 {
   sys.gps_work_flag = false;
@@ -1645,15 +1693,15 @@ void sys_sleep(void)
       sys.config_Write();
       sys.tdc = 1000;             
     }
-    else
-    {    
-      if(((EXIT_flag != 1 && button_Count1 == 0 && sys.tdc >= 4200000)|| sys.exti_flag == 4 ) && sys.gps_alarm==0)
-      {
-       Serial.println("tdc_time"); 
-       tdc_time();
-       TDC_Count ++;   
-      }
-    }
+//    else
+//    {    
+//      if(((EXIT_flag != 1 && button_Count1 == 0 && sys.tdc >= 4200000)|| sys.exti_flag == 4 ) && sys.gps_alarm==0)
+//      {
+//       Serial.println("tdc_time"); 
+//       tdc_time();
+//       TDC_Count ++;   
+//      }
+//    }
 //    os_JOINED_flag = 1;
     Serial.println("Enter sleep mode");
     if(turn_interrupts == 1 && bg_flag == 0)
@@ -1695,11 +1743,10 @@ void sys_sleep(void)
     sys.LORA_EnterSleepMode();
     rtc_gpio_isolate(GPIO_NUM_27);//mosi
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low  
-    if(sys.cdevaddr<=25692040 )
+   if ((sys.cdevaddr <= 25692040 && sys.sensor_type == 13) )
     {
       esp_sleep_enable_ext1_wakeup(BUTTON_PIN_0,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low  
     }
-     else if(sys.sensor_type == 22 || (sys.cdevaddr>25692040 )) 
     {
       esp_sleep_enable_ext1_wakeup(BUTTON_PIN_25,ESP_EXT1_WAKEUP_ANY_HIGH ); //1 = High, 0 = Low    
     }
@@ -1872,7 +1919,7 @@ void alarm_state(void)
       if (millis() - sleep_last > atsend)
       {
         if(sys.sleep_exti ==1)
-        { 
+        {   
           sys.sleep_exti =1;
           sys.config_Write();         
           myIMU.imu_power_down();  
@@ -1962,8 +2009,8 @@ void alarm_state(void)
     {     
       if(EXIT_flag != 1 && button_Count1 == 0 && sport_Count == 0)
       {
-       tdc_time();
-       TDC_Count ++;
+//       tdc_time();
+//       TDC_Count ++;
        if(sys.pedometer == 1)
        {
          sys.tdc = sys.mtdc-Pedometer_Count*2000;   
@@ -1972,14 +2019,14 @@ void alarm_state(void)
       }
       if(EXIT_flag == 1 && button_Count1 == 0 )
       {
-        if(sys.tdc>=3600000)
-        {
-          sys.tdc =3600000-sys.atst*1000;
-        }
-        else if(sys.tdc >= (sys.tdc-sys.atst*1000))
-        {
+//        if(sys.tdc>=3600000)
+//        {
+//          sys.tdc =3600000-sys.atst*1000;
+//        }
+//        else if(sys.tdc >= (sys.tdc-sys.atst*1000))
+//        {
          sys.tdc =sys.tdc-sys.atst*1000;      
-        }
+//        }
         EXIT_flag = 0;
       }
     }    
@@ -2021,18 +2068,18 @@ void alarm_state(void)
     sys.LORA_EnterSleepMode();
     rtc_gpio_isolate(GPIO_NUM_27);//mosi
     esp_sleep_enable_ext0_wakeup(GPIO_NUM_14,1); //1 = High, 0 = Low
-    if(sys.cdevaddr<=25692040 )
+    if ((sys.cdevaddr <= 25692040 && sys.sensor_type == 13) )
     {
       esp_sleep_enable_ext1_wakeup(BUTTON_PIN_0,ESP_EXT1_WAKEUP_ALL_LOW ); //1 = High, 0 = Low  
     }
-     else if(sys.sensor_type == 22 || (sys.cdevaddr>25692040 )) 
+    else if(sys.sensor_type == 22 || (sys.cdevaddr>25692040 )) 
     {
       esp_sleep_enable_ext1_wakeup(BUTTON_PIN_25,ESP_EXT1_WAKEUP_ANY_HIGH ); //1 = High, 0 = Low    
     }        
     gpio_reset();
     if(turn_interrupts == 1)
     {
-      esp_sleep_enable_timer_wakeup(sys.mtdc*1000); //设置定时器唤醒 
+      esp_sleep_enable_timer_wakeup(sys.mtdc*1000ULL); //设置定时器唤醒 
       TDC_flag = 1;
       Serial.printf("KEEP TDC:%d\r\n",sys.mtdc);      
     } 
@@ -2042,7 +2089,7 @@ void alarm_state(void)
       {
         if(sys.loggpsdata_send == 0)
         {
-           esp_sleep_enable_timer_wakeup(sys.tdc*1000); //设置定时器唤醒 
+           esp_sleep_enable_timer_wakeup(sys.tdc*1000ULL); //设置定时器唤醒 
            TDC_flag = 0;
           if(sys.pedometer == 1)
           {
@@ -2056,18 +2103,18 @@ void alarm_state(void)
         }
         else
         {
-          esp_sleep_enable_timer_wakeup(10000*1000); //设置定时器唤醒
+          esp_sleep_enable_timer_wakeup(10000*1000ULL); //设置定时器唤醒
         }
       }
       else
       {
          if(sys.alarm_count>0)
          {
-          esp_sleep_enable_timer_wakeup(sys.atdc*1000); //设置定时器唤醒
+          esp_sleep_enable_timer_wakeup(sys.atdc*1000ULL); //设置定时器唤醒
          }
          else
          {
-          esp_sleep_enable_timer_wakeup(1000*1000); //设置定时器唤醒 
+          esp_sleep_enable_timer_wakeup(1000*1000ULL); //设置定时器唤醒 
          }
       }
     }
@@ -2098,11 +2145,11 @@ void alarm_state(void)
         }
         sys.exti_flag = 4; 
       }
-      else if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
+      else if(sys.sensor_mode == 2|| sys.sensor_mode == 3 || bg_mode == 2 || bg_mode == 3)
       {
-        if(sys.sensor_mode == 2)
+        if(sys.sensor_mode == 2 || bg_mode == 2)
         {      
-          if(sys.ble_mod == 1) 
+          if(sys.ble_mod == 0 || sys.ble_mod == 1 || sys.ble_mod == 3 || sys.ble_mod == 3) 
           {  
             Serial.println("Start searching for BLE..."); 
           }
@@ -2111,11 +2158,11 @@ void alarm_state(void)
             Serial.println("Start searching for WIFI..."); 
           }        
         }
-        else if(sys.sensor_mode == 3)
+        else if(sys.sensor_mode == 3 || bg_mode == 3)
         {
          Serial.println("Enable ble and gps hybrid mode"); 
         }
-        if(sys.ble_mod == 1) 
+        if(sys.ble_mod == 0||sys.ble_mod == 1||sys.ble_mod == 3) 
         {       
           ble_init();
           ble_run();
@@ -2123,13 +2170,9 @@ void alarm_state(void)
         else if(sys.ble_mod == 2) 
         {
           wifi_scan();
-        }                   
-        if(button_Count1  == 1)
-        {
-          myIMU.imu_power_down();  
         }
-        sys.mod = sys.save_mode;
-        sys.exti_flag = 4; 
+          sys.mod = sys.save_mode;
+          sys.exti_flag = 4; 
       }     
   }  
 }
@@ -2150,33 +2193,34 @@ void downlink_alarm_send(void)
       timerAlarmEnable(timer);
     }
   }
-  else if(sys.sensor_mode == 2 || sys.sensor_mode == 3)
-  {
-    if(sys.sensor_mode == 2)
-    {      
-      if(sys.ble_mod == 1) 
-      {  
-        Serial.println("Start searching for BLE..."); 
+    else if(sys.sensor_mode == 2|| sys.sensor_mode == 3 || bg_mode == 2 || bg_mode == 3)
+    {
+      if(sys.sensor_mode == 2 || bg_mode == 2)
+      {      
+        if(sys.ble_mod == 0 || sys.ble_mod == 1 || sys.ble_mod == 3) 
+        {  
+          Serial.println("Start searching for BLE..."); 
+        }
+        else if(sys.ble_mod == 2) 
+        {  
+          Serial.println("Start searching for WIFI..."); 
+        }        
+      }
+      else if(sys.sensor_mode == 3 || bg_mode == 3)
+      {
+       Serial.println("Enable ble and gps hybrid mode"); 
+      }
+      if(sys.ble_mod == 0||sys.ble_mod == 1||sys.ble_mod == 3) 
+      {       
+        ble_init();
+        ble_run();
       }
       else if(sys.ble_mod == 2) 
-      {  
-        Serial.println("Start searching for WIFI..."); 
-      }        
-    }
-    else if(sys.sensor_mode == 3)
-    {
-      Serial.println("Enable ble and gps hybrid mode"); 
-    }
-    if(sys.ble_mod == 1) 
-    {       
-      ble_init();
-      ble_run();
-    }
-    else if(sys.ble_mod == 2) 
-    {
-      wifi_scan();
+      {
+        wifi_scan();
+      }
+      sys.mod = sys.save_mode; 
     } 
-  }
   if(sys.gps_work_flag==false && sys.collect_sensor_flag == false )
   {
     sys.collect_sensor_flag = true;
@@ -2348,9 +2392,26 @@ static void LORA_RxData(uint8_t *AppData, uint8_t AppData_Len)
             delay(1000); 
             digitalWrite(LED_PIN_RED, LOW);                
           }  
-          Stop_buzzer(); 
-             
+          Stop_buzzer();          
       }
+      if(( AppData_Len == 2 )&&(AppData[1]==0x03)) 
+      {
+          buzzer();          
+          if(sys.sensor_type == 22)  
+          {              
+            digitalWrite(LED_PIN_RED1, HIGH);
+            delay(1000); 
+            digitalWrite(LED_PIN_RED1, LOW);
+          }
+          else
+          {
+            digitalWrite(LED_PIN_RED, HIGH);
+            delay(1000); 
+            digitalWrite(LED_PIN_RED, LOW);                
+          }  
+          delay(29000);
+          Stop_buzzer();          
+      }      
     }
     break;  
     case 0x03:

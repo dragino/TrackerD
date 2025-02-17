@@ -40,12 +40,14 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
     void onResult(BLEAdvertisedDevice advertisedDevice)
     {
+
         if (advertisedDevice.haveManufacturerData() == true)
         {
           std::string strManufacturerData = advertisedDevice.getManufacturerData();
           int dataLength = advertisedDevice.getManufacturerData().length();
           char *pHex = BLEUtils::buildHexData(nullptr, (uint8_t*)advertisedDevice.getManufacturerData().data(), dataLength);    
           char cManufacturerData[100];
+          char Address[12];
           strManufacturerData.copy((char *)cManufacturerData, strManufacturerData.length(), 0);      
           if (strManufacturerData.length() == 25 && cManufacturerData[0] == 0x4C && cManufacturerData[1] == 0x00 && strlen(pHex) == 50)
           {
@@ -57,16 +59,33 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
               oBeacon.setData(strManufacturerData);
               Serial.println("Found an iBeacon!");
               id.setData(advertisedDevice.getManufacturerData());
+                                  
               //Print UUID
   //            Serial.print("UUID :");
               String bUUID = id.getProximityUUID().toString().c_str();
               bUUID = reverse(bUUID);
-  //            Serial.print(bUUID);
-        
+//              Serial.print(bUUID);
+              String getAddress = advertisedDevice.getAddress().toString().c_str(); 
+              int a=0;
+              for(int i=0;i<getAddress.length();i++)
+              {
+                if(getAddress[i] !=':')
+                {
+                Address[a++]=getAddress[i];
+                }
+              }
+              Address[a++]='\0'; 
+             if(sys.showid == 1&& sys.ble_mod == 4)
+             {                            
+              for(int i=0;i<12;i++)
+                  Serial.printf("%c",Address[i]);
+              Serial.println();
+             }               
+                                
               //Print RSSI
   //            Serial.print(",RSSI :");
               int bRSSI = advertisedDevice.getRSSI();
-              Serial.print(bRSSI);
+//              Serial.print(bRSSI);
               ltoa(bRSSI,brssi,10);
   //            Serial.printf(brssi);
               
@@ -95,7 +114,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
               {
                  mydata1[i] = bRSSI;  
               }
-             if(sys.showid == 1)
+             if(sys.showid == 1&& sys.ble_mod != 4)
              {                            
               for(int i=0;i<5;i++)
                   Serial.printf("%.2x ",mydata1[i]);
@@ -103,15 +122,31 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
              }         
             int len =0;
             memset(bufftest,0,sizeof(bufftest));
-            memcpy(bufftest,pHex+8,strlen(pHex)-8);
-            strcat(bufftest,brssi); 
+            if(sys.ble_mod != 4)
+            {           
+              memcpy(bufftest,pHex+8,strlen(pHex)-8);
+              strcat(bufftest,brssi); 
+            }
+            else
+            {
+              memcpy(bufftest,Address,strlen(Address));
+              strcat(bufftest,brssi);               
+            }
             len = strlen(sys.blemask_data);   
             if((strlen(sys.blemask_data) == 0 ||len <6 ||( sys.blemask_data[0] == '0' && sys.blemask_data[1] == '0' & sys.blemask_data[2] == '0' & sys.blemask_data[3] == '0' & sys.blemask_data[4] == '0' & sys.blemask_data[5] == '0'))&& bRSSI >= -90)
             {
                sc_count++;  
                if(sys.showid == 1 && sys.ble_mod != 3)
                {
-                  Serial.printf("blemask_data:%d\r\n",sys.blemask_data);
+                   Serial.print(AT BLEMASK "=");
+                   if(strlen(sys.blemask_data)<=10)
+                   {
+                    for(int i=0;i<strlen(sys.blemask_data);i++)
+                    {
+                       Serial.printf("%c",sys.blemask_data[i]);
+                    }
+                    Serial.println();  
+                   }
                   Serial.printf("bufftest:%s\r\n", bufftest);
                   Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
                }
@@ -135,12 +170,21 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             }
             else if(strstr(bufftest,sys.blemask_data) != NULL && bRSSI >= -90)
             {
-                sc_count++;  
+               sc_count++;  
                if(sys.showid == 1 && sys.ble_mod != 3)
                {
-                Serial.printf("bufftest:%s\r\n", bufftest);
-                Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
-               } 
+                   Serial.print(AT BLEMASK "=");
+                   if(strlen(sys.blemask_data)<=10)
+                   {
+                    for(int i=0;i<strlen(sys.blemask_data);i++)
+                    {
+                       Serial.printf("%c",sys.blemask_data[i]);
+                    }
+                    Serial.println();  
+                   }
+                  Serial.printf("bufftest:%s\r\n", bufftest);
+                  Serial.printf("bufftest length:%d\r\n", strlen(bufftest));
+               }
                strcat(sys.BLEDATA,bufftest);            
               if(sys.ble_mod == 3)
               {
@@ -179,7 +223,7 @@ void ble_init()
 void ble_run()
 {
   // put your main code here, to run repeatedly:
-  BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+  BLEScanResults foundDevices = pBLEScan->start(sys.ble_tdc, false);
   Serial.print("Devices found: ");
   Serial.println(foundDevices.getCount());
   Serial.println("Scan done!");  
@@ -195,7 +239,6 @@ void ble_data(void)
   Serial.printf("DATA Length= %d\r\n",strlen(sys.BLEDATA));
   if(sys.exti_flag != 3 && sc_count != 0)
   {
-//    Serial.printf("DATA Length= %d\r\n",strlen(sys.BLEDATA));
 //    for(int i = 0;i<strlen(sys.BLEDATA);i++)
 //    {
 //      Serial.printf("%c",sys.BLEDATA[i]);
@@ -287,8 +330,6 @@ void ble_data(void)
     }
     else if(sys.ble_mod == 3) //Scan all beacons
     {
-
-      sys.ble_flag = 1;
       int i=0,j=0;
       for(int i=0;i<sys.blecount;i++)
       {
@@ -300,24 +341,133 @@ void ble_data(void)
               Serial.printf("%.2x ",sys.bledata[i]);
           Serial.println();   
       }
-    }     
+      sys.ble_flag = 1;
+    } 
+    else if(sys.ble_mod == 4) //Find the three optimal beacons
+    {
+        int num2 = 0,num3 = 0;
+        for(int a = 0;a<3;a++)     
+        {
+          strncpy(bmin,&sys.BLEDATA[12],3);   
+//          Serial.printf("bmin:%s\r\n", bmin);
+          for(int i =0;i<strlen(sys.BLEDATA)/15-1;i++)
+          {
+            strncpy(bmax,sys.BLEDATA+(15*(i+1)+12),3); 
+//            Serial.printf("bmax:%s\r\n", bmax);
+            if(strcmp(bmin,bmax)>0)
+            {
+              strncpy(bmin,bmax,3);
+              if(a == 0)
+              {
+                num = i+1;
+              }
+              else if(a == 1)
+              {
+                num2 = i+1;
+              }
+              else if(a == 2)
+              {
+                num3 = i+1;                                               
+              }
+            }       
+          }
+          if(a == 0)
+          {
+            strncpy(sys.BLEDATA1,sys.BLEDATA+(num*15),15);
+            if(sys.showid == 1)
+            {
+            Serial.printf("DATA1:%s\r\n", sys.BLEDATA1); 
+            }            
+            sys.BLEDATA[(num*15)+12] = '9';
+          }
+          else if(a == 1)
+          {
+            strncpy(sys.BLEDATA2,sys.BLEDATA+(num2*15),15);
+            if(sys.showid == 1)
+            {
+            Serial.printf("DATA2:%s\r\n", sys.BLEDATA2); 
+            }            
+            sys.BLEDATA[(num2*15)+12] = '9';
+          }
+          else if(a == 2)
+          {
+            strncpy(sys.BLEDATA3,sys.BLEDATA+(num3*15),15);
+            strncpy(sys.BLEDATA4,sys.BLEDATA3,15);
+            if(sys.showid == 1)
+            {
+            Serial.printf("DATA3:%s\r\n", sys.BLEDATA3); 
+            } 
+            sys.BLEDATA[(num3*15)+12] = '9';
+          }       
+//          sys.ble_flag = 1;                          
+        }
+//        if(len == 2)
+//        {
+//         memset(sys.BLEDATA3,0,sizeof(sys.BLEDATA3));  
+//        }
+//        sys.ble_flag = 1;
+       if(strlen(sys.BLEDATA) ==15)
+        {
+          for(int i=0;i<15;i++)
+          {
+            sys.BLEDATA2[i]= {'f'};
+          }
+          for(int i=0;i<15;i++)
+          {
+            sys.BLEDATA4[i]= {'f'};
+          }        
+          sys.ble_flag = 1;   
+        } 
+       else if(strlen(sys.BLEDATA)==30)
+        {
+          for(int i=0;i<15;i++)
+          {
+            sys.BLEDATA4[i]= {'f'};
+          }        
+          sys.ble_flag = 1;   
+        }
+        else if(strlen(sys.BLEDATA)==45)
+        {
+          sys.ble_flag = 1;    
+        }          
+    }       
   }
   else if(sys.sensor_mode == 2 && sc_count == 0 )
   {
-    for(int i=0;i<45;i++)
-    {
-      sys.BLEDATA1[i]= {'f'};
-    }
-    sys.ble_flag = 1;   
+     if(sys.ble_mod == 4 && sc_count == 0 )
+      {
+        for(int i=0;i<15;i++)
+        {
+          sys.BLEDATA1[i]= {'f'};
+        }
+        for(int i=0;i<15;i++)
+        {
+          sys.BLEDATA2[i]= {'f'};
+        }
+        for(int i=0;i<15;i++)
+        {
+          sys.BLEDATA4[i]= {'f'};
+        }        
+        sys.ble_flag = 1;   
+      }
+     else
+     {
+        for(int i=0;i<45;i++)
+        {
+          sys.BLEDATA1[i]= {'f'};
+        }
+        sys.ble_flag = 1;                
+     }
+ 
   }
-  else if((strstr(bufftest,sys.blemask_data) == NULL && sc_count == 0)||(sys.sensor_mode == 3 && sc_count == 0))
-  {
+ else if((strstr(bufftest,sys.blemask_data) == NULL && sc_count == 0)||(sys.sensor_mode == 3 && sc_count == 0))
+ {
     if(sys.sensor_mode == 3)
     {
       sys.ble_flag = 2;
     }
-  }
-  digitalWrite(2, LOW);
+ }
+ digitalWrite(2, LOW);
 }
 
 int hexToint_ble(char *str)

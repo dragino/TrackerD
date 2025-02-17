@@ -14,6 +14,7 @@ unsigned long ALARM_STOP = 0UL;
 unsigned long ALARM_TIME = 0UL;
 uint8_t operate_flag =0;
 uint8_t button_count = 0;
+uint8_t LongPress = 0;
 LIS3DH myIMU1(0x19); //Default address is 0x19.
 // key event callback function
 //click
@@ -40,6 +41,7 @@ void attachLongPressStart()
 void attachDuringLongPress()
 {   
     sys.sleep_flag = 1;
+    LongPress =1;
     if(sys.lon == 1)
     {    
         digitalWrite(LED_PIN_GREEN, HIGH);
@@ -49,6 +51,7 @@ void attachDuringLongPress()
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 0;
       sys.alarm = 1;
+      LongPress =0;
       if(sys.lon == 1)
       {
         digitalWrite(LED_PIN_RED, HIGH);
@@ -59,6 +62,7 @@ void attachDuringLongPress()
     {
       digitalWrite(LED_PIN_GREEN, LOW);  
       sys.sleep_flag = 1;
+       LongPress =0;
 //      operate_flag = 1;
       if(sys.lon == 1)
       {
@@ -75,16 +79,17 @@ void attachDuringLongPress()
      {  
         digitalWrite(LED_PIN_RED, HIGH); 
      }
+     LongPress =0;
      sys.sleep_flag = 0;
-     if(operate_flag == 1)
-     {
+//     if(operate_flag == 1)
+//     {
         sys.exit_off =0;
         sys.alarm = 1;
         alarm(); 
         operate_flag = 0;
         sys.sleep_flag = 2;  
-     }
-    }  
+//     }
+    }
 }
 
 //Long Press Stop
@@ -106,10 +111,28 @@ void attachLongPressStop()
     {
      digitalWrite(LED_PIN_RED, LOW);
      digitalWrite(LED_PIN_BLUE, LOW);
+     digitalWrite(LED_PIN_GREEN, LOW);
      operate_flag = 1;
 //     sys.alarm = 1;
      sys.sleep_flag = 1;
-    }
+    if(LongPress == 1)
+        {
+            sys.gps_alarm = 0;
+            sys.gps_start = 2;
+            sys.alarm = 0;
+            sys.keep_flag = 0;
+            sys.alarm_count =0;        
+            sys.exti_flag = 2;
+            operate_flag = 0;
+    //        sys.gps_alarm = 1;
+    //        sys.alarm = 1;
+    //        sys.exti_flag = 1;
+            sys.buzzer_flag = 0;
+            sys.alarm_no = 1;  
+            myIMU1.imu_power_down();     
+           sys.exti_flag = 2;
+        }
+    }    
 }
 
 //Multi Click
@@ -174,12 +197,19 @@ void attachMultiClick()
         break;
       }
       default:{
+        sys.gps_alarm = 0;
+        sys.gps_start = 2;
+        sys.alarm = 0;
+        sys.keep_flag = 0;
+        sys.alarm_count =0;        
+        sys.exti_flag = 2;
+        operate_flag = 0;
 //        sys.gps_alarm = 1;
 //        sys.alarm = 1;
 //        sys.exti_flag = 1;
-//        sys.buzzer_flag = 0;
-//        sys.alarm_no = 1;  
-//        myIMU1.imu_power_down();   
+        sys.buzzer_flag = 0;
+        sys.alarm_no = 1;  
+        myIMU1.imu_power_down();   
         Serial.printf("switch:%d\r\n",button.getNumberClicks());break;}
   }
 }

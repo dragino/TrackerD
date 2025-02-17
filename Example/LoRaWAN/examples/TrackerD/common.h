@@ -12,9 +12,9 @@
 #include "hal/rtc_io_hal.h"
 
 #define Pro_model           "TrackerD "
-#define Pro_version         "v1.4.9"
+#define Pro_version         "v1.5.3"
 #define Pro_model1          "TrackerD-LS "
-#define Pro_version1        "v1.0.3"
+#define Pro_version1        "v1.0.5"
 #define EEPROM_DATA_SIZE    256
 #define EEPROM_KEY_SIZE     82
 #define EEPROM_GPSDATA_SIZE 4096
@@ -77,6 +77,7 @@ class SYS:public LORA
     uint8_t     lon = 1;      //1:on  2:0ff
     uint32_t    Positioning_time = 180000;
     uint32_t    cdevaddr = 0;
+    uint32_t    ble_tdc = 5;
     uint8_t     atst = 15;
     uint8_t     pedometer = 0;
     uint8_t     ble_gps = 0;
@@ -106,7 +107,7 @@ class SYS:public LORA
     uint8_t     save_ble_mode = 0;
     uint16_t    fire_version=0;
     uint16_t    fire_version_write=0;
-    uint8_t     channel_single = 1;
+    uint8_t     channel_single = 8;
     uint32_t    addr_gps_write=0;
     uint32_t    gps_write=0;
     uint32_t    addr_gps_read=0;
@@ -162,8 +163,7 @@ class Sensor
     int bat=0;
     int latitude=0;
     int longitude=0;
-    int altitude=0;
-    int hdop_gps=0;
+    int fmps;
     int year_gps = 0;
     int month_gps = 0;
     int day_gps = 0;

@@ -50,13 +50,13 @@ bool GPS_DATA(void)
     {
 //    Every time anything is updated, print everything.
       if (gps.altitude.isUpdated() || gps.satellites.isUpdated() || gps.hdop.isUpdated()&& model.isUpdated()
-      || gps.location.isValid() || gps.date.isUpdated() || gps.time.isUpdated() && utc_time.isUpdated())
+      || gps.location.isValid() || gps.date.isUpdated() || gps.time.isUpdated() || gps.speed.isUpdated()&& utc_time.isUpdated())
       {
         String mode1;
         mode1 =  model.value();
         sensor.pdop_gps = gps.hdop.hdop();
         sensor.Fix_Status = mode1.toInt();
-        float latitude,longitude;
+        float latitude,longitude,fmps ;
 //        Serial.print(" HDOP = ");
 //        Serial.print(sensor.pdop_gps); 
 //        Serial.print(F(" UTC=")); Serial.print(utc_time.value()); 
@@ -78,13 +78,14 @@ bool GPS_DATA(void)
         {
           latitude = gps.location.lat();
           longitude = gps.location.lng();
+          fmps = gps.speed.mps();
           Serial.printf("Latitude = %0.6f\n\r",latitude);
           Serial.printf("Longitude = %0.6f\n\r",longitude);
+          Serial.printf("m/s== %0.2f\n\r",fmps);
           Serial.printf("Date: %d-%d-%d\n\r",sensor.year_gps,sensor.month_gps,sensor.day_gps);
           Serial.printf("Time: %d:%d:%d\n\r",(sensor.hour_gps<16)?sensor.hour_gps+8:sensor.hour_gps-16,sensor.minute_gps,sensor.second_gps);
           Serial.printf("PDOP = %0.2f\n\r",sensor.pdop_gps);
           Serial.printf("Fix Status = %d\n\r",sensor.Fix_Status);
-          
         }         
         if((sensor.year_gps!=0)&&(sensor.month_gps!=0)&&(sensor.day_gps != 2000))
         {
@@ -100,13 +101,12 @@ bool GPS_DATA(void)
             sensor.longitude = (int)(longitude*1000000);
             longitiude_string = String(sensor.longitude);
 
-	    //
-	    // Altitude and HDOP for ttnmapper mode
-	    sensor.altitude = gps.altitude.meters();
-	    sensor.hdop_gps = (int)sensor.pdop_gps * 10;
-	    
+            fmps = gps.speed.mps();
+            sensor.fmps=(int)(fmps*100);
+            
             Serial.printf("Latitude = %0.6f\n\r",latitude);
             Serial.printf("Longitude = %0.6f\n\r",longitude);
+            Serial.printf("m/s== %0.2f\n\r",fmps);
             Serial.printf("Date: %d-%d-%d\n\r",sensor.year_gps,sensor.month_gps,sensor.day_gps);
             Serial.printf("Time: %d:%d:%d\n\r",(sensor.hour_gps<16)?sensor.hour_gps+8:sensor.hour_gps-16,sensor.minute_gps,sensor.second_gps);
             Serial.printf("Fix Time:%dms\r\n",millis() - last);
