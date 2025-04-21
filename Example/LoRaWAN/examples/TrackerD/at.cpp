@@ -543,6 +543,25 @@ ATEerror_t at_lon_set(const char *param)
   return AT_OK;
 }
 
+/**************       AT_FIX       **************/
+ATEerror_t at_fix_get(const char *param)
+{
+  if(keep)
+    Serial.print(AT FIX "=");
+  Serial.println(sys.fix);
+  return AT_OK;
+}
+ATEerror_t at_fix_set(const char *param)
+{
+  uint32_t is_on = atoi(param);
+  if(is_on >=2) // Has to be 1 or 0
+  {
+    return AT_PARAM_ERROR;
+  }
+  sys.fix = is_on;
+  return AT_OK;
+}
+
 /**************       AT_INTWK       **************/
 ATEerror_t at_intwk_get(const char *param)
 {

@@ -46,6 +46,7 @@ bool GPS_DATA(void)
 {
   while (SerialGPS.available() > 0)
   {
+    //Serial.println("Inside GPS_data and Serial.GPS > 0");
     if (gps.encode(SerialGPS.read()))
     {
 //    Every time anything is updated, print everything.
@@ -92,6 +93,7 @@ bool GPS_DATA(void)
           if((sys.pdop_value>=sensor.pdop_gps)&&(sensor.pdop_gps!=0.0)&&(sensor.Fix_Status == 3))
   //        if((sys.pdop_value>=sensor.pdop_gps)&&(sensor.pdop_gps!=0.0))
           {
+            // Valid GPS data, prepare uplink
             String  latitude_string , longitiude_string,year_string,month_string,day_string,hour_string,minute_string,second_string;
             latitude = gps.location.lat();
             sensor.latitude = (int)(latitude*1000000);
@@ -133,10 +135,10 @@ bool GPS_DATA(void)
               sys.gps_data_buff[i++] = (sensor.bat)           & 0xFF;  
             }             
 
-//            sys.gps_data_Weite();
-//            Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);    
-//            sys.read_gps_data_on_flash();
-//            Serial.printf("addr_gps_read:%d\r\n",sys.addr_gps_read);       
+                //            sys.gps_data_Weite();
+                //            Serial.printf("addr_gps_write:%d\r\n",sys.addr_gps_write);    
+                //            sys.read_gps_data_on_flash();
+                //            Serial.printf("addr_gps_read:%d\r\n",sys.addr_gps_read);       
             if(sys.lon == 1)
             {
               if(sys.sensor_type == 22)  
@@ -172,7 +174,17 @@ bool GPS_DATA(void)
                 digitalWrite(LED_PIN_BLUE, LOW);   
                  delay(100);             
               }
-            }        
+            }   
+            if(sys.fix == 1)
+            {
+              // placeholders for gps data will be empty
+              sensor.latitude = 0;
+              sensor.longitude = 0;
+
+              Serial.println("No GPS fix, sending placeholder data. 2nd if.");
+              
+              return true;
+            }  
             if (millis() - last > 30000)
             {
               last = millis();
@@ -184,6 +196,7 @@ bool GPS_DATA(void)
         }
         else
         {  
+          //Serial.println("Entering else statement ---- GPS.cpp ----");
           if(sys.lon == 1)
           {
               if(sys.sensor_type == 22)  
@@ -200,7 +213,18 @@ bool GPS_DATA(void)
                 digitalWrite(LED_PIN_BLUE, LOW);   
                  delay(100);             
               }
-          }        
+          }
+          // This if statement will only activate when no fix has been found and when sys.fix = 1.
+          if(sys.fix == 1)
+          {
+            // placeholders for gps data will be empty
+            sensor.latitude = 0;
+            sensor.longitude = 0;
+
+            Serial.println("No GPS fix, sending placeholder data.");
+
+            return true;
+          }
           if (millis() - last > 30000)
           {
             last = millis();

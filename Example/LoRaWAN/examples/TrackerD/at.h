@@ -50,6 +50,7 @@
 #define DEVICE        "+DEVICE"
 #define PDTA          "+PDTA"
 #define BTDC          "+BTDC"
+#define FIX           "+FIX"
 typedef enum
 {
   AT_OK = 0,
@@ -129,6 +130,8 @@ ATEerror_t at_intwk_get(const char *param);
 ATEerror_t at_intwk_set(const char *param);
 ATEerror_t at_lon_get(const char *param);
 ATEerror_t at_lon_set(const char *param);
+ATEerror_t at_fix_get(const char *param);
+ATEerror_t at_fix_set(const char *param);
 ATEerror_t at_CHS_get(const char *param);
 ATEerror_t at_CHS_set(const char *param);
 ATEerror_t at_CHE_get(const char *param);
@@ -418,6 +421,18 @@ static const struct ATCommand_s ATCommand[] =
     .set = at_lon_set,
     .run = at_return_error,
   },
+/**************** AT+FIX ****************/  
+{
+  .string = AT FIX,
+  .size_string = sizeof(FIX) - 1,
+#ifndef NO_HELP
+  .help_string = AT FIX "     : Enable/Disable Uplink without GPS",
+#endif
+  .get = at_fix_get,
+  .set = at_fix_set,
+  .run = at_return_error,
+},
+  
 /**************** AT+CHE ****************/  
   {
     .string = AT CHE,
